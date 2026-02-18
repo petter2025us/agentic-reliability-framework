@@ -1,29 +1,60 @@
-"""Infrastructure governance module for Agentic Reliability Framework (OSS)."""
+# agentic_reliability_framework/infrastructure/__init__.py
+"""
+ARF Infrastructure Governance Module
+OSS Edition - Advisory analysis for Azure infrastructure
+"""
 
-from agentic_reliability_framework.infrastructure.intents import (
+from .intents import (
     ProvisionResourceIntent,
     DeployConfigurationIntent,
     GrantAccessIntent,
-    InfrastructureIntent,
     ResourceType,
+    Environment,
+    PermissionLevel,
 )
-from agentic_reliability_framework.infrastructure.policies import Policy, PolicyEvaluator
-from agentic_reliability_framework.infrastructure.cost_estimator import CostEstimator
-from agentic_reliability_framework.infrastructure.risk_engine import RiskEngine
-from agentic_reliability_framework.infrastructure.healing_intent import HealingIntent, RecommendedAction
-from agentic_reliability_framework.infrastructure.azure.azure_simulator import AzureInfrastructureSimulator
+from .policies import (
+    Policy,
+    RegionAllowedPolicy,
+    ResourceTypeRestrictedPolicy,
+    MaxPermissionLevelPolicy,
+    CostThresholdPolicy,
+    PolicyEvaluator,
+)
+from .cost_estimator import CostEstimator
+from .risk_engine import RiskEngine, RiskFactor
+from .healing_intent import HealingIntent, IntentSource, IntentStatus, RecommendedAction
+from .azure.azure_simulator import AzureInfrastructureSimulator
 
 __all__ = [
+    # Intents
     "ProvisionResourceIntent",
     "DeployConfigurationIntent",
     "GrantAccessIntent",
-    "InfrastructureIntent",
     "ResourceType",
+    "Environment",
+    "PermissionLevel",
+    
+    # Policies
     "Policy",
+    "RegionAllowedPolicy",
+    "ResourceTypeRestrictedPolicy",
+    "MaxPermissionLevelPolicy",
+    "CostThresholdPolicy",
     "PolicyEvaluator",
+    
+    # Cost
     "CostEstimator",
+    
+    # Risk
     "RiskEngine",
+    "RiskFactor",
+    
+    # HealingIntent
     "HealingIntent",
+    "IntentSource",
+    "IntentStatus",
     "RecommendedAction",
+    
+    # Simulator
     "AzureInfrastructureSimulator",
 ]
