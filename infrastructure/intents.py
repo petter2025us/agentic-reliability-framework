@@ -1,95 +1,168 @@
 # agentic_reliability_framework/infrastructure/intents.py
 """
-Infrastructure Intent Schema – Algebraic Data Types with ARF Extensions.
+Infrastructure Intent Schema – Algebraic Data Types for Change Requests.
 
-This module implements ARF's core principle: OSS advisory layer with clean
-enterprise upgrade paths. Intents are self-validating, cryptographically
-auditable, and carry full provenance including chain-of-thought from agents.
+This module defines a family of intents as a discriminated union. Each intent
+represents a proposed infrastructure action. Intents are immutable, self-validating,
+and carry provenance for auditability.
+
+The design follows principles of domain-driven design and knowledge engineering,
+using strong typing and semantic constraints to prevent invalid states.
 """
 
 from __future__ import annotations
 
 import uuid
-import hashlib
-import hmac
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Any, Dict, Literal, Optional, Union, List
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from typing import Annotated, Any, Dict, Literal, Optional, Union
+
+from pydantic import BaseModel, Field, field_validator
 from pydantic.functional_validators import AfterValidator
 
 # -----------------------------------------------------------------------------
-# ARF-Specific Base Classes
+# Domain Primitives (NewTypes for type safety)
 # -----------------------------------------------------------------------------
-class ARFBaseModel(BaseModel):
-    """Base model with ARF-specific configuration."""
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-        populate_by_name=True,
-        validate_assignment=False,  # frozen=True already prevents assignment
-    )
-
-class SignableMixin:
-    """Mixin for cryptographic intent signing."""
-    
-    def sign(self, secret_key: bytes) -> str:
-        """Create HMAC signature of intent content."""
-        content = self.model_dump_json(exclude={'signature'}).encode()
-        return hmac.new(secret_key, content, hashlib.sha256).hexdigest()
-    
-    def verify(self, signature: str, secret_key: bytes) -> bool:
-        """Verify intent signature."""
-        expected = self.sign(secret_key)
-        return hmac.compare_digest(expected, signature)
-
-# -----------------------------------------------------------------------------
-# Enhanced Domain Primitives
-# -----------------------------------------------------------------------------
-Region = Annotated[str, AfterValidator(lambda x: x if x in VALID_AZURE_REGIONS else 
-                                        ValueError(f"Invalid region: {x}"))]
-Size = str  # Can be enhanced with regex patterns
+# These are simple wrappers that enforce type checks at runtime only if validators are added.
+# Here we use them as markers; actual validation occurs in field validators.
+Region = str
+Size = str
 Principal = str
 ResourceScope = str
-ServiceName = Annotated[str, AfterValidator(lambda x: x if len(x) >= 3 else 
-                                           ValueError("Service name too short"))]
+ServiceName = str
+ChangeScope = Literal["single_instance", "canary", "global"]
+Environment = Literal["dev", "staging", "prod", "test"]
 
 # -----------------------------------------------------------------------------
-# ARF Intent Base with Full Provenance
+# Enums for fixed sets (but extensible via new variants)
 # -----------------------------------------------------------------------------
-class ARFIntent(ARFBaseModel, SignableMixin):
-    """
-    ARF Base Intent with full provenance and chain-of-thought tracking.
-    
-    Implements ARF principles:
-    - Traceability: Every intent has unique ID and full provenance
-    - Explainability: Includes chain-of-thought from generating agent
-    - Auditability: Optional cryptographic signing
-    """
-    intent_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    requester: Principal
-    signature: Optional[str] = Field(None, description="HMAC signature for authenticity")
-    
-    # ARF-Specific Fields
-    chain_of_thought: List[Dict[str, Any]] = Field(
-        default_factory=list,
-        description="Step-by-step reasoning from agent that generated this intent"
-    )
-    confidence: float = Field(
-        default=1.0,
-        ge=0.0,
-        le=1.0,
-        description="Agent's confidence in this intent (0-1)"
-    )
-    metadata: Dict[str, Any] = Field(
+class ResourceType(str, Enum):
+    """Azure resource types with semantic meaning."""
+    VM = "vm"
+    STORAGE_ACCOUNT = "storage_account"
+    DATABASE = "database"
+    KUBERNETES_CLUSTER = "kubernetes_cluster"
+    FUNCTION_APP = "function_app"
+    VIRTUAL_NETWORK = "virtual_network"
+
+    # We could add methods here to return associated pricing categories, etc.
+
+class PermissionLevel(str, Enum):
+    """Access permission levels in increasing order of privilege."""
+    READ = "read"
+    WRITE = "write"
+    ADMIN = "admin"
+
+# -----------------------------------------------------------------------------
+# Knowledge Base Stubs (simulated – in production would be loaded from external source)
+# -----------------------------------------------------------------------------
+# These are used for semantic validation. In a real system, they would be fetched
+# from Azure APIs or a configuration service.
+VALID_AZURE_REGIONS = {
+    "eastus", "eastus2", "westus", "westeurope", "northeurope",
+    "southeastasia", "eastasia", "japaneast", "brazilsouth"
+}
+
+# Mapping of resource type to plausible size patterns (simplified)
+RESOURCE_SIZE_PATTERNS = {
+    ResourceType.VM: {"Standard_D2s_v3", "Standard_D4s_v3", "Standard_D8s_v3", "Standard_D16s_v3"},
+    ResourceType.STORAGE_ACCOUNT: {"50GB", "100GB", "1TB", "10TB"},
+    ResourceType.DATABASE: {"Basic", "Standard", "Premium"},
+    ResourceType.KUBERNETES_CLUSTER: {"Small", "Medium", "Large"},
+    ResourceType.FUNCTION_APP: {"Consumption", "Premium"},
+    ResourceType.VIRTUAL_NETWORK: {"default"},
+}
+
+# -----------------------------------------------------------------------------
+# Base Intent Class
+# -----------------------------------------------------------------------------
+class Intent(BaseModel):
+    """Abstract base for all intents, providing common fields."""
+    intent_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique identifier for this intent")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Time the intent was created")
+    requester: Principal = Field(..., description="User or service principal requesting the action")
+    provenance: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Additional context (session ID, agent version, etc.)"
+        description="Metadata about how the intent was generated (e.g., agent ID, session)"
     )
-    
-    def summarize(self) -> str:
-        """Human-readable summary for explainability."""
-        return f"{self.intent_type} by {self.requester} at {self.timestamp.isoformat()}"
+
+    class Config:
+        frozen = True  # immutable after creation
+        extra = "forbid"  # no extra fields
 
 # -----------------------------------------------------------------------------
-[Rest of intent classes with ARFIntent as base]
+# Specific Intent Types
+# -----------------------------------------------------------------------------
+class ProvisionResourceIntent(Intent):
+    """Request to provision a new Azure resource."""
+    intent_type: Literal["provision_resource"] = "provision_resource"
+    resource_type: ResourceType
+    region: Region
+    size: Size
+    configuration: Dict[str, Any] = Field(default_factory=dict)
+    environment: Environment
+
+    @field_validator("region")
+    def validate_region(cls, v: Region) -> Region:
+        if v not in VALID_AZURE_REGIONS:
+            raise ValueError(f"Unknown Azure region: {v}")
+        return v
+
+    @field_validator("size")
+    def validate_size(cls, v: Size, info) -> Size:
+        # info.data contains previously validated fields
+        resource_type = info.data.get("resource_type")
+        if resource_type and resource_type in RESOURCE_SIZE_PATTERNS:
+            if v not in RESOURCE_SIZE_PATTERNS[resource_type]:
+                raise ValueError(f"Invalid size '{v}' for resource type {resource_type}")
+        return v
+
+class DeployConfigurationIntent(Intent):
+    """Request to change configuration of an existing service."""
+    intent_type: Literal["deploy_config"] = "deploy_config"
+    service_name: ServiceName
+    change_scope: ChangeScope
+    deployment_target: Environment
+    risk_level_hint: Optional[Annotated[float, Field(ge=0, le=1)]] = None
+    configuration: Dict[str, Any] = Field(default_factory=dict)
+
+    # Optional: validate that service_name follows naming conventions
+    @field_validator("service_name")
+    def validate_service_name(cls, v: ServiceName) -> ServiceName:
+        if not v or len(v) < 3:
+            raise ValueError("Service name must be at least 3 characters")
+        return v
+
+class GrantAccessIntent(Intent):
+    """Request to grant a permission to a principal."""
+    intent_type: Literal["grant_access"] = "grant_access"
+    principal: Principal
+    permission_level: PermissionLevel
+    resource_scope: ResourceScope
+    justification: Optional[str] = None
+
+    # Validate resource_scope format (simplified)
+    @field_validator("resource_scope")
+    def validate_resource_scope(cls, v: ResourceScope) -> ResourceScope:
+        if not v.startswith("/"):
+            raise ValueError("Resource scope must start with '/'")
+        return v
+
+# -----------------------------------------------------------------------------
+# Discriminated Union of All Intents
+# -----------------------------------------------------------------------------
+InfrastructureIntent = Annotated[
+    Union[ProvisionResourceIntent, DeployConfigurationIntent, GrantAccessIntent],
+    Field(discriminator="intent_type")
+]
+
+__all__ = [
+    "ResourceType",
+    "PermissionLevel",
+    "Environment",
+    "ChangeScope",
+    "ProvisionResourceIntent",
+    "DeployConfigurationIntent",
+    "GrantAccessIntent",
+    "InfrastructureIntent",
+]
