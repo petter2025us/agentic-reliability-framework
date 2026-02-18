@@ -1,17 +1,26 @@
+# agentic_reliability_framework/infrastructure/azure/azure_simulator.py
 """
-Azure Infrastructure Simulator – main entry point for evaluating infrastructure intents.
+Azure Infrastructure Simulator – Main orchestration engine.
 
-Orchestrates cost estimation, policy evaluation (static and dynamic), and risk scoring
-to produce a HealingIntent.
+This module ties together intents, policies, cost estimation, and risk scoring
+to produce a HealingIntent. It is the primary entry point for the OSS advisory layer.
+
+The simulator is designed to be deterministic, side-effect-free, and easily
+extendable by the enterprise layer (which will replace simulation with actual
+Azure API calls while preserving the same interface).
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from agentic_reliability_framework.infrastructure.intents import (
     InfrastructureIntent,
     ProvisionResourceIntent,
 )
-from agentic_reliability_framework.infrastructure.policies import Policy, PolicyEvaluator
+from agentic_reliability_framework.infrastructure.policies import (
+    Policy,
+    PolicyEvaluator,
+    CostThresholdPolicy,
+)
 from agentic_reliability_framework.infrastructure.cost_estimator import CostEstimator
 from agentic_reliability_framework.infrastructure.risk_engine import RiskEngine
 from agentic_reliability_framework.infrastructure.healing_intent import HealingIntent, RecommendedAction
@@ -19,71 +28,56 @@ from agentic_reliability_framework.infrastructure.healing_intent import HealingI
 
 class AzureInfrastructureSimulator:
     """
-    Simulates Azure infrastructure governance.
+    Orchestrates the evaluation of an infrastructure intent.
 
-    This class is the core of the OSS advisory module. It evaluates an infrastructure
-    intent against policies, estimates cost, calculates risk, and returns a HealingIntent
-    with a recommended action.
+    The simulator uses:
+        - A policy evaluator (with a policy tree)
+        - A cost estimator
+        - A risk engine
+
+    It returns a HealingIntent with a recommendation.
     """
 
     def __init__(
         self,
-        policies: List[Policy],
+        policy: Policy,
         pricing_file: Optional[str] = None,
-        risk_weights: Optional[dict] = None,
+        risk_factors: Optional[List] = None,
     ):
         """
         Initialize the simulator.
 
         Args:
-            policies: List of Policy objects to enforce.
-            pricing_file: Optional path to a YAML file with custom pricing.
-            risk_weights: Optional custom weights for risk calculation.
+            policy: The root policy (a Policy object, possibly composite).
+            pricing_file: Optional path to custom pricing YAML.
+            risk_factors: Optional list of custom risk factors.
         """
-        self.policy_evaluator = PolicyEvaluator(policies)
-        self.policies = policies  # keep for dynamic checks
-        self.cost_estimator = CostEstimator(pricing_file)
-        self.risk_engine = RiskEngine(risk_weights)
-
-    def _collect_violations(
-        self,
-        intent: InfrastructureIntent,
-        cost: Optional[float],
-    ) -> List[str]:
-        """Collect both static and dynamic policy violations."""
-        # Static violations from PolicyEvaluator
-        violations = self.policy_evaluator.evaluate(intent)
-
-        # Dynamic: cost threshold checks
-        if cost is not None and isinstance(intent, ProvisionResourceIntent):
-            for policy in self.policies:
-                cost_violation = policy.check_cost(cost)
-                if cost_violation:
-                    violations.append(cost_violation)
-
-        return violations
+        self._policy_evaluator = PolicyEvaluator(policy)
+        self._cost_estimator = CostEstimator(pricing_file)
+        self._risk_engine = RiskEngine(risk_factors if risk_factors else RiskEngine.DEFAULT_FACTORS)
 
     def evaluate(self, intent: InfrastructureIntent) -> HealingIntent:
         """
-        Evaluate an infrastructure intent and return a HealingIntent.
+        Evaluate the intent and produce a HealingIntent.
 
-        The evaluation is deterministic and has no side effects.
+        This method is pure and deterministic (same inputs → same output).
         """
-        # Step 1: Estimate cost (if applicable)
+        # 1. Estimate cost (if applicable)
         cost = None
         if isinstance(intent, ProvisionResourceIntent):
-            cost = self.cost_estimator.estimate_monthly_cost(intent)
+            cost = self._cost_estimator.estimate_monthly_cost(intent)
 
-        # Step 2: Collect all policy violations
-        violations = self._collect_violations(intent, cost)
+        # 2. Evaluate policies with context (cost)
+        context = {"cost_estimate": cost} if cost is not None else {}
+        violations = self._policy_evaluator.evaluate(intent, context)
 
-        # Step 3: Calculate risk score
-        risk_score, explanation = self.risk_engine.calculate_risk(intent, cost, violations)
+        # 3. Compute risk
+        risk_score, explanation, contributions = self._risk_engine.calculate_risk(
+            intent, cost, violations
+        )
 
-        # Step 4: Determine recommended action
-        # Rule: if risk > 0.8 or any policy violations -> DENY
-        #       if risk > 0.4 -> ESCALATE
-        #       else -> APPROVE
+        # 4. Determine recommended action
+        #    This is a decision rule; can be made configurable.
         if risk_score > 0.8 or violations:
             recommended_action = RecommendedAction.DENY
         elif risk_score > 0.4:
@@ -91,7 +85,7 @@ class AzureInfrastructureSimulator:
         else:
             recommended_action = RecommendedAction.APPROVE
 
-        # Step 5: Build justification
+        # 5. Build justification
         justification_parts = [f"Risk score: {risk_score:.2f}."]
         if cost is not None:
             justification_parts.append(f"Estimated monthly cost: ${cost:.2f}.")
@@ -100,24 +94,25 @@ class AzureInfrastructureSimulator:
         justification_parts.append(explanation)
         justification = " ".join(justification_parts)
 
-        # Step 6: Create summary
+        # 6. Create summary
         intent_summary = f"{intent.intent_type} requested by {intent.requester}"
 
-        # Step 7: (Optional) collect raw details for debugging
+        # 7. Package evaluation details
         details = {
             "cost_estimate": cost,
             "violations": violations,
             "risk_score": risk_score,
-            "intent_type": intent.intent_type,
+            "factor_contributions": contributions,
         }
 
         return HealingIntent(
+            intent_id=intent.intent_id,
             intent_summary=intent_summary,
             cost_projection=cost,
             risk_score=risk_score,
             policy_violations=violations,
             recommended_action=recommended_action,
             justification=justification,
-            confidence_score=0.9,
+            confidence_score=0.9,  # could be derived from factor uncertainties
             evaluation_details=details,
         )
