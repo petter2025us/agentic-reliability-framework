@@ -23,7 +23,12 @@ from agentic_reliability_framework.infrastructure.policies import (
 )
 from agentic_reliability_framework.infrastructure.cost_estimator import CostEstimator
 from agentic_reliability_framework.infrastructure.risk_engine import RiskEngine
-from agentic_reliability_framework.infrastructure.healing_intent import HealingIntent, RecommendedAction
+from agentic_reliability_framework.infrastructure.healing_intent import (
+    HealingIntent,
+    RecommendedAction,
+    IntentSource,
+)
+from agentic_reliability_framework.constants import MAX_POLICY_VIOLATIONS
 
 
 class AzureInfrastructureSimulator:
@@ -35,7 +40,7 @@ class AzureInfrastructureSimulator:
         - A cost estimator
         - A risk engine
 
-    It returns a HealingIntent with a recommendation.
+    It returns a HealingIntent with a recommendation, already marked as OSS advisory.
     """
 
     def __init__(
@@ -61,6 +66,7 @@ class AzureInfrastructureSimulator:
         Evaluate the intent and produce a HealingIntent.
 
         This method is pure and deterministic (same inputs → same output).
+        The returned HealingIntent is already marked as OSS advisory.
         """
         # 1. Estimate cost (if applicable)
         cost = None
@@ -70,6 +76,10 @@ class AzureInfrastructureSimulator:
         # 2. Evaluate policies with context (cost)
         context = {"cost_estimate": cost} if cost is not None else {}
         violations = self._policy_evaluator.evaluate(intent, context)
+
+        # Enforce OSS limit on policy violations
+        if len(violations) > MAX_POLICY_VIOLATIONS:
+            violations = violations[:MAX_POLICY_VIOLATIONS]
 
         # 3. Compute risk
         risk_score, explanation, contributions = self._risk_engine.calculate_risk(
@@ -105,7 +115,8 @@ class AzureInfrastructureSimulator:
             "factor_contributions": contributions,
         }
 
-        return HealingIntent(
+        # 8. Create the HealingIntent with proper source and then mark as OSS advisory
+        healing_intent = HealingIntent(
             intent_id=intent.intent_id,
             intent_summary=intent_summary,
             cost_projection=cost,
@@ -115,4 +126,8 @@ class AzureInfrastructureSimulator:
             justification=justification,
             confidence_score=0.9,  # could be derived from factor uncertainties
             evaluation_details=details,
+            source=IntentSource.INFRASTRUCTURE_ANALYSIS,
         )
+
+        # Mark as OSS advisory (sets status=OSS_ADVISORY_ONLY and execution_allowed=False)
+        return healing_intent.mark_as_oss_advisory()
