@@ -1,11 +1,20 @@
+# agentic_reliability_framework/infrastructure/risk_engine.py
 """
-Risk scoring engine with configurable weights.
+Risk Scoring Engine – Multi-factor probabilistic risk model.
 
-Calculates a risk score between 0 and 1 based on intent type, cost, permissions,
-deployment scope, and policy violations. Weights can be customized.
+This module computes a risk score (0-1) for an infrastructure intent by combining
+multiple factors with configurable weights. The model is inspired by Bayesian
+decision theory and multi-criteria decision analysis (MCDA). It produces not only
+a score but also a detailed explanation of each factor's contribution, supporting
+transparency and psychological trust.
+
+The risk engine is designed to be extended with additional factors (e.g., historical
+data, anomaly scores) without changing the core API.
 """
 
-from typing import List, Dict, Any, Tuple, Optional
+from typing import Dict, List, Optional, Tuple, Any, Callable
+from dataclasses import dataclass, field
+
 from agentic_reliability_framework.infrastructure.intents import (
     InfrastructureIntent,
     ProvisionResourceIntent,
@@ -15,93 +24,130 @@ from agentic_reliability_framework.infrastructure.intents import (
     Environment,
 )
 
+# -----------------------------------------------------------------------------
+# Factor Definition
+# -----------------------------------------------------------------------------
+@dataclass(frozen=True)
+class RiskFactor:
+    """A single factor contributing to risk, with a weight and a scoring function."""
+    name: str
+    weight: float
+    score_fn: Callable[[InfrastructureIntent, Optional[float], List[str]], float]
+    description: str = ""
 
-class RiskEngine:
-    """Calculates risk score and explanation for an infrastructure intent."""
+    def __call__(self, intent: InfrastructureIntent, cost: Optional[float], violations: List[str]) -> float:
+        return self.score_fn(intent, cost, violations)
 
-    DEFAULT_WEIGHTS = {
-        "intent_type": {
-            "provision_resource": 0.1,
-            "grant_access": 0.3,
-            "deploy_config": 0.2,
-        },
-        "cost": 0.3,                # weight applied to normalised cost factor
-        "permission_level": 0.3,    # weight applied to permission factor
-        "deployment_scope": 0.2,    # weight applied to scope factor
-        "policy_violation": 0.2,    # weight per violation (capped at 0.8)
-        "environment": 0.1,          # extra risk for prod
+# -----------------------------------------------------------------------------
+# Built-in Factors
+# -----------------------------------------------------------------------------
+def intent_type_factor(intent: InfrastructureIntent, cost: Optional[float], violations: List[str]) -> float:
+    """Base risk from intent type."""
+    mapping = {
+        "provision_resource": 0.1,
+        "grant_access": 0.3,
+        "deploy_config": 0.2,
     }
+    return mapping.get(intent.intent_type, 0.1)
 
-    def __init__(self, weights: Optional[Dict[str, Any]] = None):
+def cost_factor(intent: InfrastructureIntent, cost: Optional[float], violations: List[str]) -> float:
+    """Risk contribution from estimated cost (normalized to [0,1])."""
+    if not isinstance(intent, ProvisionResourceIntent) or cost is None:
+        return 0.0
+    # Normalize: $0 → 0, $5000 → 1 (linear)
+    return min(cost / 5000.0, 1.0)
+
+def permission_factor(intent: InfrastructureIntent, cost: Optional[float], violations: List[str]) -> float:
+    """Risk from permission level being granted."""
+    if not isinstance(intent, GrantAccessIntent):
+        return 0.0
+    mapping = {
+        PermissionLevel.READ: 0.1,
+        PermissionLevel.WRITE: 0.4,
+        PermissionLevel.ADMIN: 0.8,
+    }
+    return mapping.get(intent.permission_level, 0.5)
+
+def scope_factor(intent: InfrastructureIntent, cost: Optional[float], violations: List[str]) -> float:
+    """Risk from deployment scope (for config changes)."""
+    if not isinstance(intent, DeployConfigurationIntent):
+        return 0.0
+    mapping = {
+        "single_instance": 0.1,
+        "canary": 0.2,
+        "global": 0.6,
+    }
+    return mapping.get(intent.change_scope, 0.3)
+
+def environment_factor(intent: InfrastructureIntent, cost: Optional[float], violations: List[str]) -> float:
+    """Additional risk if environment is production."""
+    if hasattr(intent, "environment") and intent.environment == Environment.PROD:
+        return 0.1
+    return 0.0
+
+def policy_violation_factor(intent: InfrastructureIntent, cost: Optional[float], violations: List[str]) -> float:
+    """Risk from number of policy violations (capped)."""
+    # Each violation adds 0.2, max 0.8
+    return min(len(violations) * 0.2, 0.8)
+
+# -----------------------------------------------------------------------------
+# Risk Engine
+# -----------------------------------------------------------------------------
+class RiskEngine:
+    """
+    Computes a weighted risk score from multiple factors.
+
+    The engine is initialized with a list of factors and their weights.
+    The total score is the weighted sum of factor scores, clamped to [0,1].
+    """
+
+    DEFAULT_FACTORS = [
+        RiskFactor("intent_type", 1.0, intent_type_factor, "Base risk from intent type"),
+        RiskFactor("cost", 0.3, cost_factor, "Normalized cost estimate"),
+        RiskFactor("permission", 0.3, permission_factor, "Permission level being granted"),
+        RiskFactor("scope", 0.2, scope_factor, "Deployment scope"),
+        RiskFactor("environment", 0.1, environment_factor, "Production environment"),
+        RiskFactor("policy_violations", 0.2, policy_violation_factor, "Number of policy violations"),
+    ]
+
+    def __init__(self, factors: Optional[List[RiskFactor]] = None):
         """
-        Initialize with optional custom weights.
-        Weights not provided will use the defaults.
+        Initialize with custom factors. If none provided, uses DEFAULT_FACTORS.
         """
-        self.weights = self.DEFAULT_WEIGHTS.copy()
-        if weights:
-            self.weights.update(weights)
+        self.factors = factors if factors is not None else self.DEFAULT_FACTORS
 
     def calculate_risk(
         self,
         intent: InfrastructureIntent,
         cost_estimate: Optional[float],
         policy_violations: List[str],
-    ) -> Tuple[float, str]:
+    ) -> Tuple[float, str, Dict[str, float]]:
         """
-        Return a tuple (risk_score, explanation).
-        risk_score is a float in [0, 1].
+        Compute risk score and detailed breakdown.
+
+        Returns:
+            - total_score: float in [0,1]
+            - explanation: human-readable string
+            - contributions: dict mapping factor names to their weighted contribution
         """
-        factors = []  # list of (factor_name, contribution, explanation_part)
+        total = 0.0
+        contributions = {}
 
-        # 1. Intent type base risk
-        intent_key = intent.intent_type
-        base_risk = self.weights["intent_type"].get(intent_key, 0.1)
-        factors.append(("intent_type", base_risk, f"intent type '{intent_key}'"))
+        for factor in self.factors:
+            raw_score = factor(intent, cost_estimate, policy_violations)
+            weighted = raw_score * factor.weight
+            contributions[factor.name] = weighted
+            total += weighted
 
-        # 2. Cost factor (if applicable)
-        if cost_estimate is not None and isinstance(intent, ProvisionResourceIntent):
-            # Normalise cost: $0 → 0, $5000 → 1 (linear)
-            cost_factor = min(cost_estimate / 5000.0, 1.0)
-            weighted_cost = cost_factor * self.weights["cost"]
-            factors.append(("cost", weighted_cost, f"estimated cost ${cost_estimate:.2f}"))
-        else:
-            weighted_cost = 0.0
-
-        # 3. Permission level (for access grants)
-        perm_contribution = 0.0
-        perm_expl = ""
-        if isinstance(intent, GrantAccessIntent):
-            perm_map = {PermissionLevel.READ: 0.1, PermissionLevel.WRITE: 0.4, PermissionLevel.ADMIN: 0.8}
-            perm_factor = perm_map.get(intent.permission_level, 0.5)
-            perm_contribution = perm_factor * self.weights["permission_level"]
-            factors.append(("permission", perm_contribution, f"permission level '{intent.permission_level.value}'"))
-
-        # 4. Deployment scope (for config changes)
-        scope_contribution = 0.0
-        if isinstance(intent, DeployConfigurationIntent):
-            scope_map = {"single_instance": 0.1, "canary": 0.2, "global": 0.6}
-            scope_factor = scope_map.get(intent.change_scope, 0.3)
-            scope_contribution = scope_factor * self.weights["deployment_scope"]
-            factors.append(("scope", scope_contribution, f"deployment scope '{intent.change_scope}'"))
-
-        # 5. Environment (prod adds risk)
-        env_contribution = 0.0
-        if hasattr(intent, "environment") and intent.environment == Environment.PROD:
-            env_contribution = self.weights["environment"]
-            factors.append(("environment", env_contribution, "production environment"))
-
-        # 6. Policy violations
-        violation_contribution = min(len(policy_violations) * self.weights["policy_violation"], 0.8)
-        if violation_contribution > 0:
-            factors.append(("policy_violations", violation_contribution, f"{len(policy_violations)} violation(s)"))
-
-        # Sum contributions
-        total_score = sum(contrib for _, contrib, _ in factors)
-        # Cap at 1.0
-        total_score = min(total_score, 1.0)
+        # Clamp to [0,1]
+        total = max(0.0, min(total, 1.0))
 
         # Build explanation
-        explanation_parts = ["Risk contributions:"] + [f"- {exp}: {contrib:.2f}" for _, contrib, exp in factors]
-        explanation = "\n".join(explanation_parts)
+        lines = [f"Total risk score: {total:.2f}"]
+        for factor in self.factors:
+            contrib = contributions[factor.name]
+            if contrib > 0.0:
+                lines.append(f"  - {factor.name}: {contrib:.2f} ({factor.description})")
+        explanation = "\n".join(lines)
 
-        return round(total_score, 2), explanation
+        return total, explanation, contributions
