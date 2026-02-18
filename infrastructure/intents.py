@@ -1,19 +1,43 @@
+# agentic_reliability_framework/infrastructure/intents.py
 """
-Infrastructure Intent Schema for the Agentic Reliability Framework (OSS).
+Infrastructure Intent Schema – Algebraic Data Types for Change Requests.
 
-This module defines the structured representations of infrastructure change requests.
-All intents are immutable Pydantic models with strict validation.
+This module defines a family of intents as a discriminated union. Each intent
+represents a proposed infrastructure action. Intents are immutable, self-validating,
+and carry provenance for auditability.
+
+The design follows principles of domain-driven design and knowledge engineering,
+using strong typing and semantic constraints to prevent invalid states.
 """
 
+from __future__ import annotations
+
+import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional, Union
+from typing import Annotated, Any, Dict, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
+from pydantic.functional_validators import AfterValidator
 
+# -----------------------------------------------------------------------------
+# Domain Primitives (NewTypes for type safety)
+# -----------------------------------------------------------------------------
+# These are simple wrappers that enforce type checks at runtime only if validators are added.
+# Here we use them as markers; actual validation occurs in field validators.
+Region = str
+Size = str
+Principal = str
+ResourceScope = str
+ServiceName = str
+ChangeScope = Literal["single_instance", "canary", "global"]
+Environment = Literal["dev", "staging", "prod", "test"]
 
+# -----------------------------------------------------------------------------
+# Enums for fixed sets (but extensible via new variants)
+# -----------------------------------------------------------------------------
 class ResourceType(str, Enum):
-    """Azure resource types that can be provisioned."""
+    """Azure resource types with semantic meaning."""
     VM = "vm"
     STORAGE_ACCOUNT = "storage_account"
     DATABASE = "database"
@@ -21,79 +45,122 @@ class ResourceType(str, Enum):
     FUNCTION_APP = "function_app"
     VIRTUAL_NETWORK = "virtual_network"
 
-
-class Environment(str, Enum):
-    """Deployment environment."""
-    DEV = "dev"
-    STAGING = "staging"
-    PROD = "prod"
-    TEST = "test"
-
+    # We could add methods here to return associated pricing categories, etc.
 
 class PermissionLevel(str, Enum):
-    """Access permission levels."""
+    """Access permission levels in increasing order of privilege."""
     READ = "read"
     WRITE = "write"
     ADMIN = "admin"
 
+# -----------------------------------------------------------------------------
+# Knowledge Base Stubs (simulated – in production would be loaded from external source)
+# -----------------------------------------------------------------------------
+# These are used for semantic validation. In a real system, they would be fetched
+# from Azure APIs or a configuration service.
+VALID_AZURE_REGIONS = {
+    "eastus", "eastus2", "westus", "westeurope", "northeurope",
+    "southeastasia", "eastasia", "japaneast", "brazilsouth"
+}
 
-class ProvisionResourceIntent(BaseModel):
-    """Request to provision a new cloud resource."""
-    intent_type: str = "provision_resource"
+# Mapping of resource type to plausible size patterns (simplified)
+RESOURCE_SIZE_PATTERNS = {
+    ResourceType.VM: {"Standard_D2s_v3", "Standard_D4s_v3", "Standard_D8s_v3", "Standard_D16s_v3"},
+    ResourceType.STORAGE_ACCOUNT: {"50GB", "100GB", "1TB", "10TB"},
+    ResourceType.DATABASE: {"Basic", "Standard", "Premium"},
+    ResourceType.KUBERNETES_CLUSTER: {"Small", "Medium", "Large"},
+    ResourceType.FUNCTION_APP: {"Consumption", "Premium"},
+    ResourceType.VIRTUAL_NETWORK: {"default"},
+}
+
+# -----------------------------------------------------------------------------
+# Base Intent Class
+# -----------------------------------------------------------------------------
+class Intent(BaseModel):
+    """Abstract base for all intents, providing common fields."""
+    intent_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique identifier for this intent")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Time the intent was created")
+    requester: Principal = Field(..., description="User or service principal requesting the action")
+    provenance: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadata about how the intent was generated (e.g., agent ID, session)"
+    )
+
+    class Config:
+        frozen = True  # immutable after creation
+        extra = "forbid"  # no extra fields
+
+# -----------------------------------------------------------------------------
+# Specific Intent Types
+# -----------------------------------------------------------------------------
+class ProvisionResourceIntent(Intent):
+    """Request to provision a new Azure resource."""
+    intent_type: Literal["provision_resource"] = "provision_resource"
     resource_type: ResourceType
-    region: str = Field(..., examples=["eastus", "westeurope"])
-    size: str = Field(..., description="e.g., 'Standard_D2s_v3', '50GB'")
+    region: Region
+    size: Size
     configuration: Dict[str, Any] = Field(default_factory=dict)
-    requester: str
     environment: Environment
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-    @field_validator('region')
-    def validate_region(cls, v):
-        # Simple validation – can be extended with a list of valid Azure regions
-        if not v or not isinstance(v, str):
-            raise ValueError('region must be a non‑empty string')
-        # Optionally check pattern: lower case letters and hyphens
+    @field_validator("region")
+    def validate_region(cls, v: Region) -> Region:
+        if v not in VALID_AZURE_REGIONS:
+            raise ValueError(f"Unknown Azure region: {v}")
         return v
 
+    @field_validator("size")
+    def validate_size(cls, v: Size, info) -> Size:
+        # info.data contains previously validated fields
+        resource_type = info.data.get("resource_type")
+        if resource_type and resource_type in RESOURCE_SIZE_PATTERNS:
+            if v not in RESOURCE_SIZE_PATTERNS[resource_type]:
+                raise ValueError(f"Invalid size '{v}' for resource type {resource_type}")
+        return v
 
-class DeployConfigurationIntent(BaseModel):
-    """Request to deploy a configuration change to an existing service."""
-    intent_type: str = "deploy_config"
-    service_name: str
-    change_scope: str = Field(..., description="e.g., 'single_instance', 'canary', 'global'")
+class DeployConfigurationIntent(Intent):
+    """Request to change configuration of an existing service."""
+    intent_type: Literal["deploy_config"] = "deploy_config"
+    service_name: ServiceName
+    change_scope: ChangeScope
     deployment_target: Environment
-    risk_level_hint: Optional[float] = Field(
-        None, ge=0, le=1,
-        description="Optional agent‑estimated risk (0 = safe, 1 = dangerous)"
-    )
+    risk_level_hint: Optional[Annotated[float, Field(ge=0, le=1)]] = None
     configuration: Dict[str, Any] = Field(default_factory=dict)
-    requester: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+    # Optional: validate that service_name follows naming conventions
+    @field_validator("service_name")
+    def validate_service_name(cls, v: ServiceName) -> ServiceName:
+        if not v or len(v) < 3:
+            raise ValueError("Service name must be at least 3 characters")
+        return v
 
-class GrantAccessIntent(BaseModel):
-    """Request to grant a permission to a principal on a resource scope."""
-    intent_type: str = "grant_access"
-    principal: str = Field(..., description="User or service principal identifier")
+class GrantAccessIntent(Intent):
+    """Request to grant a permission to a principal."""
+    intent_type: Literal["grant_access"] = "grant_access"
+    principal: Principal
     permission_level: PermissionLevel
-    resource_scope: str = Field(..., description="Azure resource scope (e.g., subscription, resource group)")
+    resource_scope: ResourceScope
     justification: Optional[str] = None
-    requester: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+    # Validate resource_scope format (simplified)
+    @field_validator("resource_scope")
+    def validate_resource_scope(cls, v: ResourceScope) -> ResourceScope:
+        if not v.startswith("/"):
+            raise ValueError("Resource scope must start with '/'")
+        return v
 
-# Union type for all supported intents
-InfrastructureIntent = Union[
-    ProvisionResourceIntent,
-    DeployConfigurationIntent,
-    GrantAccessIntent,
+# -----------------------------------------------------------------------------
+# Discriminated Union of All Intents
+# -----------------------------------------------------------------------------
+InfrastructureIntent = Annotated[
+    Union[ProvisionResourceIntent, DeployConfigurationIntent, GrantAccessIntent],
+    Field(discriminator="intent_type")
 ]
 
 __all__ = [
     "ResourceType",
-    "Environment",
     "PermissionLevel",
+    "Environment",
+    "ChangeScope",
     "ProvisionResourceIntent",
     "DeployConfigurationIntent",
     "GrantAccessIntent",
