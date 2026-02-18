@@ -2,19 +2,12 @@
 
 This module provides an **advisory** simulation engine for evaluating infrastructure changes against policies, cost, and risk. It is part of the open-source Agentic Reliability Framework and is designed to be extended by the enterprise layer for actual enforcement.
 
-## Purpose
-- Simulate Azure resource provisioning, configuration deployments, and access grants.
-- Estimate costs using built-in pricing tables.
-- Evaluate against configurable policies.
-- Compute a risk score (0–1).
-- Output a `HealingIntent` with a recommended action: approve, deny, or escalate.
-
-## Architecture
-- **Intents** – Pydantic models representing infrastructure change requests.
-- **Policies** – Configuration-driven rules (region restrictions, cost limits, permission bounds, etc.).
-- **CostEstimator** – Deterministic cost estimation based on static pricing.
-- **RiskEngine** – Combines intent type, cost, permissions, and policy violations into a risk score.
-- **AzureInfrastructureSimulator** – Orchestrates the evaluation and returns a `HealingIntent`.
+## Features
+- **Intent models** for provisioning, configuration deployment, and access grants.
+- **Configurable policies** (region restrictions, resource type blacklists, permission limits, cost thresholds).
+- **Cost estimation** with built‑in pricing or custom YAML files.
+- **Risk scoring** with adjustable weights.
+- **HealingIntent** output with recommendation (approve/deny/escalate).
 
 ## Usage Example
 ```python
@@ -23,16 +16,23 @@ from agentic_reliability_framework.infrastructure import (
     Policy,
     ProvisionResourceIntent,
     ResourceType,
+    Environment,
 )
+```
 
 # Define policies
+
+```python
 policies = [
-    Policy(name="cost control", max_cost_threshold_usd=500.0),
+    Policy(name="cost control", cost_threshold_usd=500.0),
     Policy(name="region allowlist", allowed_regions=["eastus", "westeurope"]),
 ]
+```
 
-# Create simulator
-sim = AzureInfrastructureSimulator(policies)
+# Create simulator (optionally with custom pricing file)
+
+```python
+sim = AzureInfrastructureSimulator(policies, pricing_file="pricing.yml")
 
 # Create an intent
 intent = ProvisionResourceIntent(
@@ -40,10 +40,48 @@ intent = ProvisionResourceIntent(
     region="eastus",
     size="Standard_D8s_v3",
     requester="alice",
-    environment="prod"
+    environment=Environment.PROD
 )
+```
 
 # Evaluate
+
+```python
 result = sim.evaluate(intent)
-print(result.recommended_action)  # e.g., "deny"
+print(result.recommended_action)
 print(result.justification)
+```
+
+Configuration
+-------------
+
+*   **Pricing**: Supply a YAML file mapping resource type (as string) to size→cost dictionaries.
+    
+*   **Risk weights**: Pass a risk\_weights dict to the simulator constructor.
+    
+
+Testing
+-------
+
+Run tests with pytest:
+
+```
+pytest tests/infrastructure/
+```
+
+License
+Apache 2.0
+
+---
+
+## 📦 Additional File: Example Pricing YAML (`pricing.yml`)
+
+```yaml
+vm:
+  Standard_D2s_v3: 70.0
+  Standard_D4s_v3: 140.0
+  custom_extra_large: 999.0
+storage_account:
+  "50GB": 5.0
+  "1TB": 100.0
+```
