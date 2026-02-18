@@ -1,0 +1,15 @@
+name: arf
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - pydantic>=2.0
+  - pytest
+  - pytest-asyncio
+  - pyyaml
+  # Additional dependencies for your infrastructure module
+  - pip:
+    - -e .  # install the package in editable mode
