@@ -1,12 +1,12 @@
 """
 HealingIntent – the immutable advisory output of the OSS layer.
 
-Contains the evaluation results and a recommended action.
+Contains the evaluation results and a recommended action, plus optional details.
 """
 
 from enum import Enum
+from typing import List, Optional, Any, Dict
 from pydantic import BaseModel, Field
-from typing import List, Optional
 
 
 class RecommendedAction(str, Enum):
@@ -30,6 +30,9 @@ class HealingIntent(BaseModel):
     recommended_action: RecommendedAction
     justification: str = Field(description="Human-readable explanation of the recommendation")
     confidence_score: float = Field(ge=0, le=1, description="Confidence in the evaluation (0-1)")
+    evaluation_details: Optional[Dict[str, Any]] = Field(
+        None, description="Raw factor contributions (for debugging/UI)"
+    )
 
     class Config:
         frozen = True  # make the object immutable
