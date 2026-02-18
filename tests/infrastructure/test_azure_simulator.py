@@ -5,6 +5,8 @@ from agentic_reliability_framework.infrastructure.intents import (
     ProvisionResourceIntent,
     GrantAccessIntent,
     ResourceType,
+    Environment,
+    PermissionLevel,
 )
 from agentic_reliability_framework.infrastructure.healing_intent import RecommendedAction
 
@@ -17,7 +19,7 @@ def test_simulator_approve_low_risk():
         region="eastus",
         size="Standard_D2s_v3",
         requester="alice",
-        environment="dev"
+        environment=Environment.DEV
     )
     result = simulator.evaluate(intent)
     assert result.recommended_action == RecommendedAction.APPROVE
@@ -30,7 +32,7 @@ def test_simulator_deny_high_risk():
     simulator = AzureInfrastructureSimulator(policies)
     intent = GrantAccessIntent(
         principal="bob",
-        permission_level="admin",
+        permission_level=PermissionLevel.ADMIN,
         resource_scope="/subscriptions/123",
         requester="alice"
     )
@@ -40,26 +42,32 @@ def test_simulator_deny_high_risk():
     assert "admin" in result.justification
 
 
-def test_simulator_escalate_medium_risk():
-    policies = [Policy(name="allow all", description="no restrictions")]
+def test_simulator_deny_due_to_cost_threshold():
+    policies = [Policy(name="cost limit", cost_threshold_usd=100.0)]
     simulator = AzureInfrastructureSimulator(policies)
     intent = ProvisionResourceIntent(
         resource_type=ResourceType.VM,
         region="eastus",
-        size="Standard_D16s_v3",  # high cost, but no policy violations
+        size="Standard_D8s_v3",  # cost 280 > 100
         requester="alice",
-        environment="prod"
+        environment=Environment.DEV
     )
     result = simulator.evaluate(intent)
-    # risk around 0.13 -> still low, but we want to test escalate case.
-    # To force escalate, we need a scenario with risk between 0.4 and 0.8.
-    # Let's craft a medium risk: grant access with write permission (0.3+0.4*0.3=0.42)
-    intent2 = GrantAccessIntent(
+    assert result.recommended_action == RecommendedAction.DENY
+    assert "exceeds threshold" in result.justification
+    assert len(result.policy_violations) == 1
+
+
+def test_simulator_escalate_medium_risk():
+    policies = [Policy(name="allow all", description="no restrictions")]
+    simulator = AzureInfrastructureSimulator(policies)
+    # Grant access with write permission gives risk ~0.42
+    intent = GrantAccessIntent(
         principal="bob",
-        permission_level="write",
+        permission_level=PermissionLevel.WRITE,
         resource_scope="/subscriptions/123",
         requester="alice"
     )
-    result2 = simulator.evaluate(intent2)
-    assert result2.recommended_action == RecommendedAction.ESCALATE
-    assert 0.4 < result2.risk_score < 0.8
+    result = simulator.evaluate(intent)
+    assert result.recommended_action == RecommendedAction.ESCALATE
+    assert 0.4 < result.risk_score < 0.8
