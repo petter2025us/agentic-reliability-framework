@@ -4,6 +4,8 @@ from agentic_reliability_framework.infrastructure.intents import (
     ProvisionResourceIntent,
     GrantAccessIntent,
     ResourceType,
+    Environment,
+    PermissionLevel,
 )
 
 
@@ -22,7 +24,7 @@ def test_policy_evaluator_region_restriction():
         region="westus",
         size="Standard_D2s_v3",
         requester="alice",
-        environment="prod"
+        environment=Environment.PROD
     )
     violations = evaluator.evaluate(intent)
     assert len(violations) == 1
@@ -44,7 +46,7 @@ def test_policy_evaluator_restricted_resource_type():
         region="eastus",
         size="Medium",
         requester="alice",
-        environment="prod"
+        environment=Environment.PROD
     )
     violations = evaluator.evaluate(intent)
     assert len(violations) == 1
@@ -63,7 +65,7 @@ def test_policy_evaluator_permission_limit():
 
     intent = GrantAccessIntent(
         principal="bob",
-        permission_level="admin",
+        permission_level=PermissionLevel.ADMIN,
         resource_scope="/subscriptions/123",
         requester="alice"
     )
@@ -73,9 +75,16 @@ def test_policy_evaluator_permission_limit():
 
     intent_ok = GrantAccessIntent(
         principal="bob",
-        permission_level="write",
+        permission_level=PermissionLevel.WRITE,
         resource_scope="/subscriptions/123",
         requester="alice"
     )
     violations_ok = evaluator.evaluate(intent_ok)
     assert len(violations_ok) == 0
+
+
+def test_policy_check_cost():
+    policy = Policy(name="cost limit", cost_threshold_usd=100.0)
+    assert policy.check_cost(50.0) is None
+    assert policy.check_cost(150.0) is not None
+    assert "exceeds threshold" in policy.check_cost(150.0)
