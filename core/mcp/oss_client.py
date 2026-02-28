@@ -1,4 +1,4 @@
-# """
+"""
 OSS MCP Client - Advisory Mode Only
 Apache 2.0 Licensed - Enterprise execution requires commercial license
 
