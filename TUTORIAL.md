@@ -4,6 +4,9 @@ This tutorial walks a new user through the Agentic Reliability Framework
 (ARF) core concepts and typical workflows. All snippets are runnable; copy
 and paste into a Python REPL or notebook after installing the package.
 
+A live, web‑based demo of the engine is available at
+https://huggingface.co/spaces/petter2025/Agentic-Reliability-Framework-v4.
+
 ---
 
 ## 1. Installation & Environment
@@ -149,7 +152,7 @@ print("95% interval", ci)
 
 These intervals are used internally by the **Deterministic Probability
 Thresholding** rule to decide approve/deny/escalate (configured via
-`	au_{low}`/`	au_{high}`).
+`\tau_{low}`/`\tau_{high}`).
 
 ---
 
@@ -171,4 +174,5 @@ components live.
 
 That concludes the quick tour! Dive into the code, read the docs at
 https://docs.agentic-reliability-framework.io, and don't hesitate to open an
-issue or contribute a PR. Happy hacking!  
+issue or contribute a PR. Happy hacking!
+

@@ -4,6 +4,12 @@ Thank you for your interest in contributing to the Agentic Reliability
 Framework! This document outlines how to get started, coding conventions, and
 the workflow for submitting changes.
 
+If you have questions at any point, feel free to reach out to the project
+maintainer:
+
+- **Email:** petter2025us@outlook.com
+- **LinkedIn:** https://www.linkedin.com/in/petterjuan/
+
 ---
 
 ## 🛠️ Development Environment
@@ -15,7 +21,7 @@ the workflow for submitting changes.
    ```
 
 2. **Create and activate a Python environment** (the `environment.yml` file
-   describes a conda environment):
+describes a conda environment):
    ```bash
    conda env create -f environment.yml
    conda activate arf
@@ -111,3 +117,4 @@ patterns used in this repository.
 
 Thanks again for contributing! Your work helps make ARF more reliable and
 accessible for everyone. 🚀
+

@@ -1,8 +1,11 @@
 # Agentic Reliability Framework (ARF) – OSS Edition
 
 [![PyPI](https://img.shields.io/pypi/v/agentic-reliability-framework.svg)](https://pypi.org/project/agentic-reliability-framework/)
-[![Documentation Status](https://readthedocs.org/projects/agentic-reliability-framework/badge/?version=latest)](https://docs.agentic-reliability-framework.io/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python Versions](https://img.shields.io/pypi/pyversions/agentic-reliability-framework.svg)](https://pypi.org/project/agentic-reliability-framework/)
+[![Tests](https://github.com/petter2025us/agentic-reliability-framework/actions/workflows/python-package-conda.yml/badge.svg)](https://github.com/petter2025us/agentic-reliability-framework/actions/workflows/python-package-conda.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Hugging Face Space](https://img.shields.io/badge/demo%20space-v4-orange?logo=huggingface)](https://huggingface.co/spaces/petter2025/Agentic-Reliability-Framework-v4)
+[![Hugging Face API](https://img.shields.io/badge/API%20%E2%80%93%20legacy-gray?logo=huggingface)](https://huggingface.co/spaces/petter2025/Agentic-Reliability-Framework-API)
 
 Agentic Reliability Framework (ARF) is an open‑source advisory engine that
 simulates governance decisions for cloud infrastructure. Its mission is to
@@ -49,7 +52,8 @@ adapters) and produce human‑readable justifications.
 
 For a hands‑on introduction to ARF, check out the **[Tutorial](TUTORIAL.md)**.
 It covers installation, core concepts, step‑by‑step examples, multi‑agent
-analysis, and how to run the interactive demo.
+analysis, and how to run the interactive demo. A live demo is available at
+[Hugging Face Space v4](https://huggingface.co/spaces/petter2025/Agentic-Reliability-Framework-v4).
 
 ---
 
@@ -153,17 +157,44 @@ open‑source core safe:
 - Cost and policy modules contain no cloud credentials.
 - Critical constants (e.g. `MAX_POLICY_VIOLATIONS`) are reviewed by the
   security team.
+- **Enterprise features** include audit trails, approval workflows, blast
+  radius limits, and integration with corporate logging. Contact us for docs
+  and a demo.
 
 Anyone can fork and run the OSS engine, but production enforcement requires
-enterprise integration.
+enterprise integration. For commercial inquiries or support, please reach out
+via the **Contact** section below.
 
 ---
 
 ## 🔗 Links
 
-- **Live demo:** https://agentic-reliability-framework.demo.example.com  
-- **Full documentation:** https://docs.agentic-reliability-framework.io  
-- **Azure simulator API reference:** [docs/infrastructure.md](docs/infrastructure.md)
+- **Live demo:** https://huggingface.co/spaces/petter2025/Agentic-Reliability-Framework-v4
+- **Legacy API demo:** https://huggingface.co/spaces/petter2025/Agentic-Reliability-Framework-API
+- **Full documentation:** docs/ (online version coming soon at
+  https://docs.agentic-reliability-framework.io)
+
+
+### 📚 Citation
+
+If you use ARF in research, please cite:
+
+```bibtex
+@misc{arf2025,
+  title={Agentic Reliability Framework (ARF)},
+  author={Juan, Petter and contributors},
+  year={2025},
+  howpublished={\url{https://github.com/petter2025us/agentic-reliability-framework}}
+}
+```
+
+
+## 📬 Contact
+
+- Email: [petter2025us@outlook.com](mailto:petter2025us@outlook.com)
+- LinkedIn: [petterjuan](https://www.linkedin.com/in/petterjuan/)
+- Book a call: [Calendly – 30 min](https://calendly.com/petter2025us/30min)
+
 
 ## 📦 Additional File: Example Pricing YAML (`pricing.yml`)
 
@@ -176,3 +207,4 @@ storage_account:
   "50GB": 5.0
   "1TB": 100.0
 ```
+
