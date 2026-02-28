@@ -1,13 +1,8 @@
-# agentic_reliability_framework/infrastructure/azure/azure_simulator.py
 """
 Azure Infrastructure Simulator – Main orchestration engine.
 
 This module ties together intents, policies, cost estimation, and risk scoring
 to produce a HealingIntent. It is the primary entry point for the OSS advisory layer.
-
-The simulator is designed to be deterministic, side-effect-free, and easily
-extendable by the enterprise layer (which will replace simulation with actual
-Azure API calls while preserving the same interface).
 """
 
 from typing import List, Optional, Dict, Any
@@ -38,7 +33,7 @@ class AzureInfrastructureSimulator:
     The simulator uses:
         - A policy evaluator (with a policy tree)
         - A cost estimator
-        - A risk engine
+        - A risk engine (Bayesian version)
 
     It returns a HealingIntent with a recommendation, already marked as OSS advisory.
     """
@@ -47,7 +42,7 @@ class AzureInfrastructureSimulator:
         self,
         policy: Policy,
         pricing_file: Optional[str] = None,
-        risk_factors: Optional[List] = None,
+        risk_factors: Optional[List] = None,  # kept for compatibility, but not used
     ):
         """
         Initialize the simulator.
@@ -55,11 +50,12 @@ class AzureInfrastructureSimulator:
         Args:
             policy: The root policy (a Policy object, possibly composite).
             pricing_file: Optional path to custom pricing YAML.
-            risk_factors: Optional list of custom risk factors.
+            risk_factors: Ignored (kept for backward compatibility).
         """
         self._policy_evaluator = PolicyEvaluator(policy)
         self._cost_estimator = CostEstimator(pricing_file)
-        self._risk_engine = RiskEngine(risk_factors if risk_factors else RiskEngine.DEFAULT_FACTORS)
+        # Bayesian risk engine does not require factors
+        self._risk_engine = RiskEngine()
 
     def evaluate(self, intent: InfrastructureIntent) -> HealingIntent:
         """
@@ -81,7 +77,7 @@ class AzureInfrastructureSimulator:
         if len(violations) > MAX_POLICY_VIOLATIONS:
             violations = violations[:MAX_POLICY_VIOLATIONS]
 
-        # 3. Compute risk
+        # 3. Compute risk (Bayesian)
         risk_score, explanation, contributions = self._risk_engine.calculate_risk(
             intent, cost, violations
         )
