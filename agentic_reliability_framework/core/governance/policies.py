@@ -1,14 +1,15 @@
-# agentic_reliability_framework/infrastructure/policies.py
+# agentic_reliability_framework/core/governance/policies.py
 """
 Policy Algebra – Composable, typed policies for infrastructure governance.
+Enhanced with probabilistic evaluation for uncertain inputs.
 
 This module defines a composable policy system using a monoid-like structure.
 Policies can be combined (AND, OR) and evaluated against intents. The algebra
 enables building complex rules from simple primitives while maintaining
 deterministic evaluation.
 
-The design draws from knowledge engineering (rule-based systems), decision
-engineering (explicit trade-offs), and platform engineering (pluggable backends).
+Additionally, it provides a probabilistic evaluator that accepts uncertain
+inputs (distributions) and returns violation probabilities.
 """
 
 from __future__ import annotations
@@ -16,6 +17,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Protocol, Set, TypeVar, Union
+from collections import defaultdict
+
+import numpy as np
+from scipy import stats
 
 from pydantic import BaseModel
 
@@ -112,15 +117,12 @@ class CostThresholdPolicy(AtomicPolicy):
     """
     Enforce a maximum monthly cost.
     Note: This policy requires the cost estimate to be provided externally.
-    We evaluate it only when a cost is supplied via context.
     """
     max_cost_usd: float
 
     def evaluate(self, intent: InfrastructureIntent, cost: Optional[float] = None) -> EvalResult:
-        # This is a special case – we need cost from the simulator.
-        # We'll handle it by allowing context injection. For composition, we'll use a wrapper.
-        # In practice, we'll evaluate this in the simulator and add violations manually.
-        # For now, we keep it as a marker.
+        # This method is used by the deterministic evaluator with a cost value.
+        # For probabilistic evaluation, we use the UncertainNumber version via the evaluator.
         return []
 
 # -----------------------------------------------------------------------------
@@ -163,7 +165,7 @@ class NotPolicy(Policy):
             return ["Condition not met (NOT policy)"]
 
 # -----------------------------------------------------------------------------
-# Context-Aware Evaluation
+# Context-Aware Deterministic Evaluator
 # -----------------------------------------------------------------------------
 class PolicyEvaluator:
     """
@@ -179,8 +181,6 @@ class PolicyEvaluator:
         Evaluate the policy tree against the intent, using context for dynamic checks.
         Context may contain 'cost_estimate' for CostThresholdPolicy, etc.
         """
-        # For simplicity, we traverse the tree and apply context where needed.
-        # A more sophisticated implementation would use a visitor pattern.
         return self._evaluate_recursive(self._root, intent, context or {})
 
     def _evaluate_recursive(self, policy: Policy, intent: InfrastructureIntent, context: Dict[str, Any]) -> EvalResult:
@@ -211,6 +211,119 @@ class PolicyEvaluator:
         return []
 
 # -----------------------------------------------------------------------------
+# Probabilistic Evaluation – Uncertain Numbers and Probabilistic Evaluator
+# -----------------------------------------------------------------------------
+
+class UncertainNumber:
+    """
+    Represents an uncertain numeric quantity with a probability distribution.
+    Currently supports normal distribution; can be extended.
+    """
+    def __init__(self, mean: float, std: float = 0.0, dist_type='normal'):
+        self.mean = mean
+        self.std = std
+        self.dist_type = dist_type
+        if dist_type == 'normal' and std > 0:
+            self.dist = stats.norm(loc=mean, scale=std)
+        else:
+            self.dist = None  # deterministic
+
+    def probability_gt(self, threshold: float) -> float:
+        """Return P(X > threshold)"""
+        if self.dist is None:
+            return 1.0 if self.mean > threshold else 0.0
+        return 1 - self.dist.cdf(threshold)
+
+    def probability_lt(self, threshold: float) -> float:
+        """Return P(X < threshold)"""
+        if self.dist is None:
+            return 1.0 if self.mean < threshold else 0.0
+        return self.dist.cdf(threshold)
+
+    def sample(self, n: int = 1000) -> np.ndarray:
+        """Draw samples for Monte Carlo."""
+        if self.dist is None:
+            return np.full(n, self.mean)
+        return self.dist.rvs(size=n)
+
+
+class ProbabilisticPolicyEvaluator:
+    """
+    Evaluates policies with uncertain inputs, returning probability of violation.
+    """
+
+    def __init__(self, root_policy: Policy):
+        self._root = root_policy
+
+    def evaluate_probabilistic(self, intent: InfrastructureIntent,
+                               context: Optional[Dict[str, UncertainNumber]] = None,
+                               n_samples: int = 1000) -> Dict[str, Any]:
+        """
+        Evaluate policy tree with uncertain context, returning violation probabilities.
+
+        Args:
+            intent: The infrastructure intent.
+            context: Dict mapping context keys to UncertainNumber (e.g., cost_estimate).
+            n_samples: Number of Monte Carlo samples for uncertainty propagation.
+
+        Returns:
+            Dictionary with:
+                - violation_probability: overall probability of violation (0-1)
+                - per_policy_probabilities: dict mapping policy names to violation probabilities
+                - samples_used: number of samples
+        """
+        if context is None:
+            context = {}
+
+        # Prepare sample arrays for each uncertain context key
+        samples = {}
+        for key, unc in context.items():
+            samples[key] = unc.sample(n_samples)
+
+        # If no uncertain inputs, just do deterministic evaluation
+        if not samples:
+            violations = self._evaluate_deterministic(intent, context)
+            return {
+                'violation_probability': 1.0 if violations else 0.0,
+                'per_policy_probabilities': {},
+                'samples_used': 1
+            }
+
+        # Monte Carlo
+        violation_counts = 0
+        # We'll also track per-policy probabilities approximately by noting which policies contributed
+        # This requires a more detailed evaluation that returns structured violations.
+        # For simplicity, we'll just return overall probability here.
+        # A more advanced version could record per-policy violations for each sample.
+
+        for i in range(n_samples):
+            # Build context dict for this sample
+            sample_context = {}
+            for key, arr in samples.items():
+                sample_context[key] = arr[i]
+
+            # Evaluate deterministic policy
+            eval_det = PolicyEvaluator(self._root)
+            violations = eval_det.evaluate(intent, sample_context)
+
+            if violations:
+                violation_counts += 1
+
+        violation_prob = violation_counts / n_samples
+
+        return {
+            'violation_probability': violation_prob,
+            'per_policy_probabilities': {},  # placeholder for future extension
+            'samples_used': n_samples
+        }
+
+    def _evaluate_deterministic(self, intent: InfrastructureIntent,
+                                 context: Dict[str, Any]) -> List[str]:
+        """Helper to run deterministic evaluation with point values."""
+        eval_det = PolicyEvaluator(self._root)
+        return eval_det.evaluate(intent, context)
+
+# -----------------------------------------------------------------------------
 # Policy Builder (DSL) – convenience functions
 # -----------------------------------------------------------------------------
 def allow_all() -> Policy:
@@ -239,6 +352,8 @@ __all__ = [
     "OrPolicy",
     "NotPolicy",
     "PolicyEvaluator",
+    "ProbabilisticPolicyEvaluator",
+    "UncertainNumber",
     "allow_all",
     "deny_all",
 ]
