@@ -1,5 +1,8 @@
 # ARF Infrastructure Governance Module (OSS)
 
+This is the actively maintained version of ARF.
+The original repository (petterjuan/agentic-reliability-framework) is frozen due to access constraints. All future development happens here.
+
 This module provides an **advisory** simulation engine for evaluating infrastructure changes against policies, cost, and risk. It is part of the open-source Agentic Reliability Framework and is designed to be extended by the enterprise layer for actual enforcement.
 
 ## Features
