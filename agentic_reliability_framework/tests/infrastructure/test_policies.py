@@ -1,6 +1,14 @@
 import pytest
-from agentic_reliability_framework.infrastructure.policies import Policy, PolicyEvaluator
-from agentic_reliability_framework.infrastructure.intents import (
+from agentic_reliability_framework.core.governance.policies import (
+    RegionAllowedPolicy,
+    ResourceTypeRestrictedPolicy,
+    MaxPermissionLevelPolicy,
+    CostThresholdPolicy,
+    PolicyEvaluator,
+    allow_all,
+    deny_all,
+)
+from agentic_reliability_framework.core.governance.intents import (
     ProvisionResourceIntent,
     GrantAccessIntent,
     ResourceType,
@@ -10,15 +18,8 @@ from agentic_reliability_framework.infrastructure.intents import (
 
 
 def test_policy_evaluator_region_restriction():
-    policies = [
-        Policy(
-            name="restrict regions",
-            description="Only eastus allowed",
-            allowed_regions=["eastus"]
-        )
-    ]
-    evaluator = PolicyEvaluator(policies)
-
+    policy = RegionAllowedPolicy(allowed_regions={"eastus"})
+    evaluator = PolicyEvaluator(policy)
     intent = ProvisionResourceIntent(
         resource_type=ResourceType.VM,
         region="westus",
@@ -32,15 +33,8 @@ def test_policy_evaluator_region_restriction():
 
 
 def test_policy_evaluator_restricted_resource_type():
-    policies = [
-        Policy(
-            name="no k8s",
-            description="Kubernetes clusters are expensive",
-            restricted_resource_types=["kubernetes_cluster"]
-        )
-    ]
-    evaluator = PolicyEvaluator(policies)
-
+    policy = ResourceTypeRestrictedPolicy(forbidden_types={ResourceType.KUBERNETES_CLUSTER})
+    evaluator = PolicyEvaluator(policy)
     intent = ProvisionResourceIntent(
         resource_type=ResourceType.KUBERNETES_CLUSTER,
         region="eastus",
@@ -54,15 +48,8 @@ def test_policy_evaluator_restricted_resource_type():
 
 
 def test_policy_evaluator_permission_limit():
-    policies = [
-        Policy(
-            name="no admin",
-            description="Admin access is forbidden",
-            max_permission_level="write"
-        )
-    ]
-    evaluator = PolicyEvaluator(policies)
-
+    policy = MaxPermissionLevelPolicy(max_level=PermissionLevel.WRITE)
+    evaluator = PolicyEvaluator(policy)
     intent = GrantAccessIntent(
         principal="bob",
         permission_level=PermissionLevel.ADMIN,
@@ -83,8 +70,48 @@ def test_policy_evaluator_permission_limit():
     assert len(violations_ok) == 0
 
 
-def test_policy_check_cost():
-    policy = Policy(name="cost limit", cost_threshold_usd=100.0)
-    assert policy.check_cost(50.0) is None
-    assert policy.check_cost(150.0) is not None
-    assert "exceeds threshold" in policy.check_cost(150.0)
+def test_cost_threshold_policy():
+    policy = CostThresholdPolicy(max_cost_usd=100.0)
+    evaluator = PolicyEvaluator(policy)
+    intent = ProvisionResourceIntent(
+        resource_type=ResourceType.VM,
+        region="eastus",
+        size="Standard_D8s_v3",
+        requester="alice",
+        environment=Environment.PROD
+    )
+    violations = evaluator.evaluate(intent, context={"cost_estimate": 150.0})
+    assert len(violations) == 1
+    assert "exceeds threshold" in violations[0]
+
+    violations_ok = evaluator.evaluate(intent, context={"cost_estimate": 50.0})
+    assert len(violations_ok) == 0
+
+
+def test_allow_all_policy():
+    policy = allow_all()
+    evaluator = PolicyEvaluator(policy)
+    intent = ProvisionResourceIntent(
+        resource_type=ResourceType.VM,
+        region="mars",
+        size="any",
+        requester="alice",
+        environment=Environment.PROD
+    )
+    violations = evaluator.evaluate(intent)
+    assert len(violations) == 0
+
+
+def test_deny_all_policy():
+    policy = deny_all()
+    evaluator = PolicyEvaluator(policy)
+    intent = ProvisionResourceIntent(
+        resource_type=ResourceType.VM,
+        region="eastus",
+        size="Standard_D2s_v3",
+        requester="alice",
+        environment=Environment.PROD
+    )
+    violations = evaluator.evaluate(intent)
+    assert len(violations) == 1
+    assert "denied" in violations[0]
