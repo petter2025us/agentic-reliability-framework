@@ -3,7 +3,7 @@ import tempfile
 import yaml
 import os
 from agentic_reliability_framework.core.governance.cost_estimator import CostEstimator
-from agentic_reliability_framework.core.governance.intents import ProvisionResourceIntent, ResourceType, Environment
+from agentic_reliability_framework.core.governance.intents import ProvisionResourceIntent, ResourceType
 
 
 def test_cost_estimator_known_size():
@@ -13,7 +13,7 @@ def test_cost_estimator_known_size():
         region="eastus",
         size="Standard_D2s_v3",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     cost = estimator.estimate_monthly_cost(intent)
     assert cost == 70.0
@@ -26,7 +26,7 @@ def test_cost_estimator_unknown_size():
         region="eastus",
         size="SuperLarge",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     cost = estimator.estimate_monthly_cost(intent)
     assert cost is None
@@ -47,7 +47,7 @@ def test_cost_estimator_with_yaml():
         region="eastus",
         size="custom_size",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     cost = estimator.estimate_monthly_cost(intent)
     assert cost == 999.0
@@ -61,14 +61,14 @@ def test_cost_delta_with_baseline():
         region="eastus",
         size="Standard_D8s_v3",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     baseline = ProvisionResourceIntent(
         resource_type=ResourceType.VM,
         region="eastus",
         size="Standard_D2s_v3",
         requester="bob",
-        environment=Environment.PROD
+        environment="prod"
     )
     delta = estimator.cost_delta_vs_baseline(intent, baseline)
     assert delta == 210.0
@@ -81,7 +81,7 @@ def test_cost_delta_without_baseline():
         region="eastus",
         size="Standard_D8s_v3",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     delta = estimator.cost_delta_vs_baseline(intent)
-    assert delta == 210.0  # 280 - 70
+    assert delta == 210.0
