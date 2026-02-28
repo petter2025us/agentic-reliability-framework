@@ -3,9 +3,12 @@ Enhanced Reliability Engine – main entry point for processing reliability even
 """
 
 import asyncio
+import threading
 import logging
 import datetime
-from typing import Optional, Dict, Any
+import json
+import numpy as np
+from typing import Optional, Dict, Any, List
 
 from agentic_reliability_framework.core.models.event import ReliabilityEvent, EventSeverity, HealingAction
 from agentic_reliability_framework.core.governance.policy_engine import PolicyEngine
@@ -110,7 +113,7 @@ class EnhancedReliabilityEngine:
         hmc_analysis = None
         if self.hmc_learner.is_ready:
             try:
-                risk_samples = self.hmc_learner.posterior_predictive(component, event.model_dump())
+                risk_samples = self.hmc_learner.posterior_predictive(event.component, event.model_dump())
                 hmc_analysis = {
                     'mean_risk': float(np.mean(risk_samples)),
                     'std_risk': float(np.std(risk_samples)),
