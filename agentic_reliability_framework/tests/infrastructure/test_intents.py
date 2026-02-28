@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from agentic_reliability_framework.infrastructure.intents import (
+from agentic_reliability_framework.core.governance.intents import (
     ProvisionResourceIntent,
     DeployConfigurationIntent,
     GrantAccessIntent,
