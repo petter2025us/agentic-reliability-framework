@@ -9,7 +9,7 @@ import numpy as np
 from collections import deque
 from typing import Dict, List, Optional, Tuple, Any
 
-from agentic_reliability_framework.core.models.event import ForecastResult
+from agentic_reliability_framework.core.models.event import ForecastResult, ReliabilityEvent
 from agentic_reliability_framework.core.config.constants import (
     HISTORY_WINDOW, CACHE_EXPIRY_MINUTES, FORECAST_MIN_DATA_POINTS,
     FORECAST_LOOKAHEAD_MINUTES, SLOPE_THRESHOLD_INCREASING,
