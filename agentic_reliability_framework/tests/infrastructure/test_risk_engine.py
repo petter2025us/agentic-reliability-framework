@@ -20,8 +20,9 @@ def test_risk_low_cost():
         environment=Environment.DEV
     )
     score, _, _ = engine.calculate_risk(intent, cost_estimate=70.0, policy_violations=[])
-    # expected: intent_type 0.1 + cost (70/5000*0.3=0.0042) = 0.1042
-    assert score == pytest.approx(0.1042, abs=1e-3)
+    # Compute category prior mean: for COMPUTE (1.0,12.0) -> 1/13 ≈ 0.0769
+    # No context multiplier (DEV) -> 0.0769
+    assert score == pytest.approx(0.0769, abs=1e-3)
 
 
 def test_risk_high_cost():
@@ -34,8 +35,11 @@ def test_risk_high_cost():
         environment=Environment.PROD
     )
     score, _, _ = engine.calculate_risk(intent, cost_estimate=560.0, policy_violations=[])
-    # base 0.1 + cost (560/5000*0.3=0.0336) + env 0.1 = 0.2336
-    assert score == pytest.approx(0.2336, abs=1e-3)
+    # Compute prior mean for compute: 1/13 ≈ 0.0769
+    # Context multiplier for PROD = 1.5
+    # Note: cost_estimate is ignored in Bayesian engine (except for category mapping)
+    # So risk = 0.0769 * 1.5 = 0.11535
+    assert score == pytest.approx(0.1154, abs=1e-3)
 
 
 def test_risk_access_grant_admin():
@@ -47,8 +51,9 @@ def test_risk_access_grant_admin():
         requester="alice"
     )
     score, _, _ = engine.calculate_risk(intent, cost_estimate=None, policy_violations=[])
-    # intent_type 0.3 + permission (0.8*0.3=0.24) = 0.54
-    assert score == 0.54
+    # Security category prior (2.0,10.0) mean = 2/12 ≈ 0.1667
+    # No context multiplier (no environment specified)
+    assert score == 0.1667
 
 
 def test_risk_with_policy_violations():
@@ -65,8 +70,11 @@ def test_risk_with_policy_violations():
         cost_estimate=280.0,
         policy_violations=["region not allowed", "cost too high"]
     )
-    # base 0.1 + cost (280/5000*0.3=0.0168) + env 0.1 + violations (2*0.2=0.4) = 0.6168
-    assert score == pytest.approx(0.6168, abs=1e-3)
+    # Compute prior mean for compute: 0.0769
+    # Context multiplier = 1.5
+    # Note: policy_violations are ignored in Bayesian engine (they affect policy evaluation, not risk)
+    # So risk = 0.0769 * 1.5 = 0.11535
+    assert score == pytest.approx(0.1154, abs=1e-3)
 
 
 def test_deploy_config_risk():
@@ -79,5 +87,9 @@ def test_deploy_config_risk():
         configuration={}
     )
     score, _, _ = engine.calculate_risk(intent, cost_estimate=None, policy_violations=[])
-    # intent_type 0.2 + scope 0.6*0.2 = 0.12 + env 0.1 = 0.42
-    assert score == 0.42
+    # Category is COMPUTE (since service_name contains "api" -> DEFAULT, but actually we need to check mapping)
+    # According to categorize_intent, DeployConfigurationIntent with "api" service goes to DEFAULT unless "database" in name.
+    # DEFAULT prior (1.0,10.0) mean = 1/11 ≈ 0.0909
+    # Context multiplier = 1.5
+    # risk = 0.0909 * 1.5 = 0.13636
+    assert score == pytest.approx(0.1364, abs=1e-3)
