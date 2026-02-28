@@ -9,7 +9,6 @@ from agentic_reliability_framework.core.governance.intents import (
     ProvisionResourceIntent,
     GrantAccessIntent,
     ResourceType,
-    Environment,
     PermissionLevel,
 )
 from agentic_reliability_framework.core.governance.healing_intent import RecommendedAction
@@ -23,11 +22,11 @@ def test_simulator_approve_low_risk():
         region="eastus",
         size="Standard_D2s_v3",
         requester="alice",
-        environment=Environment.DEV
+        environment="dev"  # was Environment.DEV
     )
     result = simulator.evaluate(intent)
     assert result.recommended_action == RecommendedAction.APPROVE
-    # Bayesian risk for compute category prior (1.0,12.0) mean ≈ 0.0769; plus context multiplier 1.0 => ~0.077
+    # Bayesian risk for compute category prior (1.0,12.0) mean ≈ 0.0769
     assert result.risk_score == pytest.approx(0.077, abs=0.01)
     assert result.cost_projection == 70.0
 
@@ -43,7 +42,7 @@ def test_simulator_deny_high_risk():
     )
     result = simulator.evaluate(intent)
     assert result.recommended_action == RecommendedAction.DENY
-    # Security category prior (2.0,10.0) mean = 2/12 ≈ 0.1667
+    # Security category prior (2.0,10.0) mean = 0.1667
     assert result.risk_score == pytest.approx(0.1667, abs=0.01)
     assert "admin" in result.justification
 
@@ -54,9 +53,9 @@ def test_simulator_deny_due_to_cost_threshold():
     intent = ProvisionResourceIntent(
         resource_type=ResourceType.VM,
         region="eastus",
-        size="Standard_D8s_v3",  # cost 280 > 100
+        size="Standard_D8s_v3",
         requester="alice",
-        environment=Environment.DEV
+        environment="dev"
     )
     result = simulator.evaluate(intent)
     assert result.recommended_action == RecommendedAction.DENY
