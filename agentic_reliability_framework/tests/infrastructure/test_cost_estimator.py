@@ -1,8 +1,9 @@
 import pytest
 import tempfile
 import yaml
-from agentic_reliability_framework.infrastructure.cost_estimator import CostEstimator
-from agentic_reliability_framework.infrastructure.intents import ProvisionResourceIntent, ResourceType, Environment
+import os
+from agentic_reliability_framework.core.governance.cost_estimator import CostEstimator
+from agentic_reliability_framework.core.governance.intents import ProvisionResourceIntent, ResourceType, Environment
 
 
 def test_cost_estimator_known_size():
@@ -53,7 +54,6 @@ def test_cost_estimator_with_yaml():
     assert cost == 999.0
 
     # Clean up
-    import os
     os.unlink(temp_path)
 
 
