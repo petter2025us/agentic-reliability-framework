@@ -1,0 +1,33 @@
+{
+  "name": "python_abi",
+  "version": "3.10",
+  "build": "8_cp310",
+  "build_number": 8,
+  "channel": "https://conda.anaconda.org/conda-forge/noarch",
+  "subdir": "noarch",
+  "fn": "python_abi-3.10-8_cp310.conda",
+  "md5": "05e00f3b21e88bb3d658ac700b2ce58c",
+  "url": "https://conda.anaconda.org/conda-forge/noarch/python_abi-3.10-8_cp310.conda",
+  "sha256": "7ad76fa396e4bde336872350124c0819032a9e8a0a40590744ff9527b54351c1",
+  "depends": [],
+  "constrains": [
+    "python 3.10.* *_cpython"
+  ],
+  "noarch": "generic",
+  "license": "BSD-3-Clause",
+  "package_type": "noarch_generic",
+  "timestamp": 1752805924000,
+  "size": 6999,
+  "requested_spec": "None",
+  "package_tarball_full_path": "/opt/conda/pkgs/python_abi-3.10-8_cp310.conda",
+  "extracted_package_dir": "/opt/conda/pkgs/python_abi-3.10-8_cp310",
+  "files": [],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": []
+  },
+  "link": {
+    "source": "/opt/conda/pkgs/python_abi-3.10-8_cp310",
+    "type": 1
+  }
+}

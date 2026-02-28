@@ -1,0 +1,223 @@
+{
+  "name": "backports.asyncio.runner",
+  "version": "1.2.0",
+  "build": "pyhe01879c_2",
+  "build_number": 2,
+  "channel": "https://conda.anaconda.org/conda-forge/noarch",
+  "subdir": "noarch",
+  "fn": "backports.asyncio.runner-1.2.0-pyhe01879c_2.conda",
+  "md5": "6ad331fe989595229e3272d81bb12b7f",
+  "url": "https://conda.anaconda.org/conda-forge/noarch/backports.asyncio.runner-1.2.0-pyhe01879c_2.conda",
+  "sha256": "58e37414e7e0eafc71062a944925c750a25f56a402d6dd5cd9b201b263c5f325",
+  "depends": [
+    "python >=3.9",
+    "python"
+  ],
+  "constrains": [
+    "python >=3.9,<3.11"
+  ],
+  "noarch": "python",
+  "license": "PSF-2.0",
+  "package_type": "noarch_python",
+  "timestamp": 1753456387000,
+  "size": 43275,
+  "requested_spec": "None",
+  "package_tarball_full_path": "/opt/conda/pkgs/backports.asyncio.runner-1.2.0-pyhe01879c_2.conda",
+  "extracted_package_dir": "/opt/conda/pkgs/backports.asyncio.runner-1.2.0-pyhe01879c_2",
+  "files": [
+    "etc/conda/test-files/backports.asyncio.runner/1/tests/test_asyncio_runner.py",
+    "etc/conda/test-files/backports.asyncio.runner/1/tests/test_extras.py",
+    "etc/conda/test-files/backports.asyncio.runner/1/tests/test_signal.py",
+    "etc/conda/test-files/backports.asyncio.runner/1/tests/test_tasks_py310.py",
+    "etc/conda/test-files/backports.asyncio.runner/1/tests/test_tasks_py38.py",
+    "etc/conda/test-files/backports.asyncio.runner/1/tests/test_tasks_py39.py",
+    "lib/python3.10/site-packages/backports/asyncio/runner/__init__.py",
+    "lib/python3.10/site-packages/backports/asyncio/runner/_int_to_enum.py",
+    "lib/python3.10/site-packages/backports/asyncio/runner/_patch.py",
+    "lib/python3.10/site-packages/backports/asyncio/runner/py.typed",
+    "lib/python3.10/site-packages/backports/asyncio/runner/runner.py",
+    "lib/python3.10/site-packages/backports/asyncio/runner/runner.pyi",
+    "lib/python3.10/site-packages/backports/asyncio/runner/tasks.py",
+    "lib/python3.10/site-packages/backports_asyncio_runner-1.2.0.dist-info/INSTALLER",
+    "lib/python3.10/site-packages/backports_asyncio_runner-1.2.0.dist-info/METADATA",
+    "lib/python3.10/site-packages/backports_asyncio_runner-1.2.0.dist-info/RECORD",
+    "lib/python3.10/site-packages/backports_asyncio_runner-1.2.0.dist-info/REQUESTED",
+    "lib/python3.10/site-packages/backports_asyncio_runner-1.2.0.dist-info/WHEEL",
+    "lib/python3.10/site-packages/backports_asyncio_runner-1.2.0.dist-info/direct_url.json",
+    "lib/python3.10/site-packages/backports_asyncio_runner-1.2.0.dist-info/licenses/LICENSE.md",
+    "lib/python3.10/site-packages/backports/asyncio/runner/__pycache__/__init__.cpython-310.pyc",
+    "lib/python3.10/site-packages/backports/asyncio/runner/__pycache__/_int_to_enum.cpython-310.pyc",
+    "lib/python3.10/site-packages/backports/asyncio/runner/__pycache__/_patch.cpython-310.pyc",
+    "lib/python3.10/site-packages/backports/asyncio/runner/__pycache__/runner.cpython-310.pyc",
+    "lib/python3.10/site-packages/backports/asyncio/runner/__pycache__/tasks.cpython-310.pyc"
+  ],
+  "paths_data": {
+    "paths_version": 1,
+    "paths": [
+      {
+        "_path": "etc/conda/test-files/backports.asyncio.runner/1/tests/test_asyncio_runner.py",
+        "path_type": "hardlink",
+        "sha256": "ec32974428df3e4f6a478bc41357c78dff015bc40badc2654d4f43070d1405d9",
+        "size_in_bytes": 9836,
+        "sha256_in_prefix": "ec32974428df3e4f6a478bc41357c78dff015bc40badc2654d4f43070d1405d9"
+      },
+      {
+        "_path": "etc/conda/test-files/backports.asyncio.runner/1/tests/test_extras.py",
+        "path_type": "hardlink",
+        "sha256": "b0f88edd9a66c5bc0cfe3ffe632872a2da701dbd00858a7f63c9ee4090ba98ed",
+        "size_in_bytes": 4684,
+        "sha256_in_prefix": "b0f88edd9a66c5bc0cfe3ffe632872a2da701dbd00858a7f63c9ee4090ba98ed"
+      },
+      {
+        "_path": "etc/conda/test-files/backports.asyncio.runner/1/tests/test_signal.py",
+        "path_type": "hardlink",
+        "sha256": "961a9e2d507a38f14a3e051c7351a55093569390847b3176a6e4c0ba9e0de269",
+        "size_in_bytes": 1712,
+        "sha256_in_prefix": "961a9e2d507a38f14a3e051c7351a55093569390847b3176a6e4c0ba9e0de269"
+      },
+      {
+        "_path": "etc/conda/test-files/backports.asyncio.runner/1/tests/test_tasks_py310.py",
+        "path_type": "hardlink",
+        "sha256": "97daa0716801a3b055a22ac25463b1196127938cf410b878170153cfee679ee8",
+        "size_in_bytes": 114805,
+        "sha256_in_prefix": "97daa0716801a3b055a22ac25463b1196127938cf410b878170153cfee679ee8"
+      },
+      {
+        "_path": "etc/conda/test-files/backports.asyncio.runner/1/tests/test_tasks_py38.py",
+        "path_type": "hardlink",
+        "sha256": "e5a9986477dd27c3f47297f4a194e443ab14025c1d6a0791e1ee815c598af4b9",
+        "size_in_bytes": 111942,
+        "sha256_in_prefix": "e5a9986477dd27c3f47297f4a194e443ab14025c1d6a0791e1ee815c598af4b9"
+      },
+      {
+        "_path": "etc/conda/test-files/backports.asyncio.runner/1/tests/test_tasks_py39.py",
+        "path_type": "hardlink",
+        "sha256": "55ada5544da7a06a7d31a1ce9758a2cb7f209bc99185d98f03a29eba6574abf3",
+        "size_in_bytes": 112400,
+        "sha256_in_prefix": "55ada5544da7a06a7d31a1ce9758a2cb7f209bc99185d98f03a29eba6574abf3"
+      },
+      {
+        "_path": "site-packages/backports/asyncio/runner/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "93f1ded0e4cb56a46602f2f6d237ec2c2eb87355698c22a56c81ace58876da84",
+        "size_in_bytes": 1501,
+        "sha256_in_prefix": "93f1ded0e4cb56a46602f2f6d237ec2c2eb87355698c22a56c81ace58876da84"
+      },
+      {
+        "_path": "site-packages/backports/asyncio/runner/_int_to_enum.py",
+        "path_type": "hardlink",
+        "sha256": "c09f842a0177595644f9ec10c8e7a078e6988c10bc5ce6a9650a11a72814d99a",
+        "size_in_bytes": 710,
+        "sha256_in_prefix": "c09f842a0177595644f9ec10c8e7a078e6988c10bc5ce6a9650a11a72814d99a"
+      },
+      {
+        "_path": "site-packages/backports/asyncio/runner/_patch.py",
+        "path_type": "hardlink",
+        "sha256": "3f3800b8a6e43616a912b4a76033776b4ec22254d5b4a791a8d288f1e40e5b75",
+        "size_in_bytes": 651,
+        "sha256_in_prefix": "3f3800b8a6e43616a912b4a76033776b4ec22254d5b4a791a8d288f1e40e5b75"
+      },
+      {
+        "_path": "site-packages/backports/asyncio/runner/py.typed",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0,
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "_path": "site-packages/backports/asyncio/runner/runner.py",
+        "path_type": "hardlink",
+        "sha256": "d0eb28d0365a8eafaaf056049e87fcf9a73813b0d1386f3de14bec3914c687c7",
+        "size_in_bytes": 9564,
+        "sha256_in_prefix": "d0eb28d0365a8eafaaf056049e87fcf9a73813b0d1386f3de14bec3914c687c7"
+      },
+      {
+        "_path": "site-packages/backports/asyncio/runner/runner.pyi",
+        "path_type": "hardlink",
+        "sha256": "594893819f231aea7df56ffa3c4d61265fd7bd868776d0216ec199d6f179f0bf",
+        "size_in_bytes": 760,
+        "sha256_in_prefix": "594893819f231aea7df56ffa3c4d61265fd7bd868776d0216ec199d6f179f0bf"
+      },
+      {
+        "_path": "site-packages/backports/asyncio/runner/tasks.py",
+        "path_type": "hardlink",
+        "sha256": "f745bda79002ea4a98d5c2d19a6648ba7568e72525011523ed2d55becefa9ffe",
+        "size_in_bytes": 3667,
+        "sha256_in_prefix": "f745bda79002ea4a98d5c2d19a6648ba7568e72525011523ed2d55becefa9ffe"
+      },
+      {
+        "_path": "site-packages/backports_asyncio_runner-1.2.0.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "bc33022edcb7639ff53355b4e91dade50a0bbf0299efeb6171d1ec0ba5029cfc",
+        "size_in_bytes": 6,
+        "sha256_in_prefix": "bc33022edcb7639ff53355b4e91dade50a0bbf0299efeb6171d1ec0ba5029cfc"
+      },
+      {
+        "_path": "site-packages/backports_asyncio_runner-1.2.0.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "7912c24d0ba6f14a483a43f7ba9ca54eb420d50b20af7f847a859e1fdd6d3058",
+        "size_in_bytes": 7542,
+        "sha256_in_prefix": "7912c24d0ba6f14a483a43f7ba9ca54eb420d50b20af7f847a859e1fdd6d3058"
+      },
+      {
+        "_path": "site-packages/backports_asyncio_runner-1.2.0.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "96be47674d43cd64e73b68f3a160d3c5644ca2f9bbc1a0fb955d88e74a2a28c7",
+        "size_in_bytes": 1663,
+        "sha256_in_prefix": "96be47674d43cd64e73b68f3a160d3c5644ca2f9bbc1a0fb955d88e74a2a28c7"
+      },
+      {
+        "_path": "site-packages/backports_asyncio_runner-1.2.0.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0,
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "_path": "site-packages/backports_asyncio_runner-1.2.0.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "aad0b0a12256807936d52d4a6f88a1773236ae527564a688bab4e3fe780e8724",
+        "size_in_bytes": 87,
+        "sha256_in_prefix": "aad0b0a12256807936d52d4a6f88a1773236ae527564a688bab4e3fe780e8724"
+      },
+      {
+        "_path": "site-packages/backports_asyncio_runner-1.2.0.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "6c6d4d6839a97f7d2094bc07f4b4cfa92ef22c1f9c64febee3d9b26be1382fe4",
+        "size_in_bytes": 135,
+        "sha256_in_prefix": "6c6d4d6839a97f7d2094bc07f4b4cfa92ef22c1f9c64febee3d9b26be1382fe4"
+      },
+      {
+        "_path": "site-packages/backports_asyncio_runner-1.2.0.dist-info/licenses/LICENSE.md",
+        "path_type": "hardlink",
+        "sha256": "42dc7abeff3b548860a23773afb6495785fd9de86bd6c1c16e3bfe76715b78f0",
+        "size_in_bytes": 2339,
+        "sha256_in_prefix": "42dc7abeff3b548860a23773afb6495785fd9de86bd6c1c16e3bfe76715b78f0"
+      },
+      {
+        "_path": "lib/python3.10/site-packages/backports/asyncio/runner/__pycache__/__init__.cpython-310.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "lib/python3.10/site-packages/backports/asyncio/runner/__pycache__/_int_to_enum.cpython-310.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "lib/python3.10/site-packages/backports/asyncio/runner/__pycache__/_patch.cpython-310.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "lib/python3.10/site-packages/backports/asyncio/runner/__pycache__/runner.cpython-310.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "lib/python3.10/site-packages/backports/asyncio/runner/__pycache__/tasks.cpython-310.pyc",
+        "path_type": "pyc_file"
+      }
+    ]
+  },
+  "link": {
+    "source": "/opt/conda/pkgs/backports.asyncio.runner-1.2.0-pyhe01879c_2",
+    "type": 1
+  }
+}
