@@ -12,7 +12,6 @@ from agentic_reliability_framework.core.governance.intents import (
     ProvisionResourceIntent,
     GrantAccessIntent,
     ResourceType,
-    Environment,
     PermissionLevel,
 )
 
@@ -25,7 +24,7 @@ def test_policy_evaluator_region_restriction():
         region="westus",
         size="Standard_D2s_v3",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     violations = evaluator.evaluate(intent)
     assert len(violations) == 1
@@ -40,7 +39,7 @@ def test_policy_evaluator_restricted_resource_type():
         region="eastus",
         size="Medium",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     violations = evaluator.evaluate(intent)
     assert len(violations) == 1
@@ -78,7 +77,7 @@ def test_cost_threshold_policy():
         region="eastus",
         size="Standard_D8s_v3",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     violations = evaluator.evaluate(intent, context={"cost_estimate": 150.0})
     assert len(violations) == 1
@@ -96,7 +95,7 @@ def test_allow_all_policy():
         region="mars",
         size="any",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     violations = evaluator.evaluate(intent)
     assert len(violations) == 0
@@ -110,7 +109,7 @@ def test_deny_all_policy():
         region="eastus",
         size="Standard_D2s_v3",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     violations = evaluator.evaluate(intent)
     assert len(violations) == 1
