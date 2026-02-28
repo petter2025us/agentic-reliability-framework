@@ -1,22 +1,12 @@
-# tests/test_healing_intent_serialization.py
-"""
-Integration test: Infrastructure HealingIntent ↔ old ARF compatibility.
-"""
-
 import pytest
 import time
-from datetime import datetime
-
-# Import new infrastructure components
-from agentic_reliability_framework.infrastructure import (
+from agentic_reliability_framework.core.governance.healing_intent import (
     HealingIntent as InfraHealingIntent,
     IntentSource,
     IntentStatus,
     RecommendedAction,
     ConfidenceDistribution,
 )
-
-# Import old ARF components (re-exported at top level)
 from agentic_reliability_framework import (
     HealingIntentSerializer as OldSerializer,
     HealingIntent as OldHealingIntent,
