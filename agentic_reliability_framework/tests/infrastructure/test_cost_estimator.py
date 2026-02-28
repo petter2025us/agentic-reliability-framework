@@ -33,7 +33,6 @@ def test_cost_estimator_unknown_size():
 
 
 def test_cost_estimator_with_yaml():
-    # Create a temporary YAML file
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
         yaml.dump({
             'vm': {
@@ -52,8 +51,6 @@ def test_cost_estimator_with_yaml():
     )
     cost = estimator.estimate_monthly_cost(intent)
     assert cost == 999.0
-
-    # Clean up
     os.unlink(temp_path)
 
 
