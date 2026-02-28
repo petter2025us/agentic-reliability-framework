@@ -21,12 +21,11 @@ import os
 import json
 import threading
 import logging
+import datetime
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass
 from enum import Enum
-import pickle
 
 import pymc as pm
 import arviz as az
@@ -150,63 +149,75 @@ class HMCModel:
             json.dump(data, f, indent=2)
         logger.info(f"HMC model saved to {self.model_path}")
 
-    def _extract_features(self, intent: InfrastructureIntent) -> np.ndarray:
-        """
-        Extract feature vector from intent for HMC prediction.
-        Must match the feature order used during training.
-        """
-        # For simplicity, we use a fixed set of features.
-        # In production, you would store feature names from training.
-        hour = datetime.datetime.now().hour
-        sin_hour = np.sin(2 * np.pi * hour / 24)
-        cos_hour = np.cos(2 * np.pi * hour / 24)
-
-        cat = categorize_intent(intent)
-        cat_features = [1.0 if cat == c else 0.0 for c in ActionCategory]
-
-        env_prod = 1.0 if hasattr(intent, "environment") and intent.environment == Environment.PROD else 0.0
-
-        # Placeholder for user role (could come from intent.requester)
-        user_role = 0.0  # e.g., 0 = junior, 1 = senior
-
-        # Policy violation count is not part of intent; would be passed separately.
-        # We'll assume it's provided as context in calculate_risk.
-        # For now, we omit it.
-
-        features = np.array([sin_hour, cos_hour, env_prod, user_role] + cat_features)
-        return features.reshape(1, -1)
-
     def predict(self, intent: InfrastructureIntent, context: Dict[str, Any]) -> Optional[float]:
         """
         Return the HMC‑predicted probability of incident for the given intent.
         Returns None if model not ready.
         """
-        if not self.is_ready or self.coefficients is None:
+        if not self.is_ready or self.coefficients is None or self.feature_names is None:
             return None
-        x = self._extract_features(intent)
+
+        # Build feature vector in the same order as feature_names
+        # We need a function that maps intent + context to a named feature dict.
+        # For demonstration, we create a simple fixed‑order list based on feature_names.
+        # In a production system, you would store the exact feature engineering pipeline.
+        # Here we assume feature_names are like: ['sin_hour', 'cos_hour', 'env_prod', 'user_role', 'cat_database', ...]
+        hour = datetime.datetime.now().hour
+        sin_hour = np.sin(2 * np.pi * hour / 24)
+        cos_hour = np.cos(2 * np.pi * hour / 24)
+        env_prod = 1.0 if hasattr(intent, "environment") and intent.environment == Environment.PROD else 0.0
+        user_role = 0.0  # placeholder
+
+        cat = self._categorize_intent(intent)
+        cat_features = [1.0 if cat == c else 0.0 for c in ActionCategory]
+
+        # Combine into a dict in the order of feature_names
+        feature_dict = {
+            'sin_hour': sin_hour,
+            'cos_hour': cos_hour,
+            'env_prod': env_prod,
+            'user_role': user_role,
+            'cat_database': 1.0 if cat == ActionCategory.DATABASE else 0.0,
+            'cat_network': 1.0 if cat == ActionCategory.NETWORK else 0.0,
+            'cat_compute': 1.0 if cat == ActionCategory.COMPUTE else 0.0,
+            'cat_security': 1.0 if cat == ActionCategory.SECURITY else 0.0,
+            'cat_default': 1.0 if cat == ActionCategory.DEFAULT else 0.0,
+        }
+
+        # Build feature vector in the order of self.feature_names
+        x = np.array([feature_dict.get(name, 0.0) for name in self.feature_names]).reshape(1, -1)
+
         if self.feature_scaler:
             x = self.feature_scaler.transform(x)
+
         # Linear predictor: intercept + sum(beta_i * x_i)
-        # We stored coefficients as dict with names matching those in trace.
-        # This requires consistent naming. For simplicity, we'll use a fixed order.
-        # A robust implementation would store coefficient order.
-        # Here we assume coeffs dict contains 'alpha' and 'beta_0', 'beta_1', ...
-        # We'll just use the order from feature_names.
-        if self.feature_names is None:
-            return None
-        # Build feature vector in the same order as feature_names
-        feat_dict = self._extract_features_named(intent)  # returns dict
+        # We stored coefficients with names like 'alpha', 'beta_sin_hour', etc.
         lin = self.coefficients.get('alpha', 0.0)
-        for name in self.feature_names:
-            if name.startswith('beta_'):
-                # name like 'beta_latency' – we need to map to actual feature value
-                # This is simplistic; in practice you'd maintain a mapping.
-                pass
-        # For a proper implementation, you would store the design matrix columns.
-        # We'll skip the full complexity here and assume a simple linear combination.
-        # In practice, you would use the scaler and coefficients from the trace.
-        # We'll return a placeholder.
-        return 0.5
+        for i, name in enumerate(self.feature_names):
+            beta_name = f'beta_{name}'
+            if beta_name in self.coefficients:
+                lin += self.coefficients[beta_name] * x[0, i]
+
+        # Logistic transform
+        prob = 1.0 / (1.0 + np.exp(-lin))
+        return float(prob)
+
+    def _categorize_intent(self, intent: InfrastructureIntent) -> ActionCategory:
+        """Helper to categorize intent (duplicate of later function)."""
+        if isinstance(intent, ProvisionResourceIntent):
+            if intent.resource_type in (ResourceType.DATABASE, ResourceType.STORAGE_ACCOUNT):
+                return ActionCategory.DATABASE
+            elif intent.resource_type == ResourceType.VM:
+                return ActionCategory.COMPUTE
+            elif intent.resource_type == ResourceType.VIRTUAL_NETWORK:
+                return ActionCategory.NETWORK
+        elif isinstance(intent, GrantAccessIntent):
+            return ActionCategory.SECURITY
+        elif isinstance(intent, DeployConfigurationIntent):
+            if "database" in intent.service_name.lower():
+                return ActionCategory.DATABASE
+            return ActionCategory.COMPUTE
+        return ActionCategory.DEFAULT
 
     def train(self, incidents_df: pd.DataFrame):
         """
@@ -252,7 +263,7 @@ class HMCModel:
 
 
 # =============================================================================
-# Helper: categorize intent
+# Helper: categorize intent (public version)
 # =============================================================================
 def categorize_intent(intent: InfrastructureIntent) -> ActionCategory:
     if isinstance(intent, ProvisionResourceIntent):
@@ -312,7 +323,6 @@ class RiskEngine:
             final_risk = conjugate_risk
             weight_hmc = 0.0
         else:
-            # Weight based on how many incidents we have (heuristic)
             with self._lock:
                 n = self.total_incidents
             weight_hmc = min(1.0, n / self.n0)
