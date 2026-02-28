@@ -1,22 +1,21 @@
-# agentic_reliability_framework/__init__.py
 """
-Agentic Reliability Framework - OSS Edition
-Unified package containing both the original ARF components and the new
-infrastructure governance module for Azure.
+Agentic Reliability Framework - OSS Edition v4
+Unified platform with core governance, runtime agents, and memory systems.
 
-The original ARF exports are available at the top level for backward compatibility.
-New infrastructure components can be accessed via the `.infrastructure` submodule
-or via top‑level symbols with an `Infra` prefix (e.g., `InfraHealingIntent`).
+This package provides:
+- Core governance engine (intents, policies, risk scoring)
+- MCP client for advisory analysis
+- HealingIntent for OSS→Enterprise handoff
+- RAG memory for similar incident retrieval
 """
 
-__version__ = "1.0.0"
+__version__ = "4.0.0"
 
 # ============================================================================
-# IMPORT ORIGINAL ARF COMPONENTS (for drop‑in compatibility)
+# CONSTANTS & OSS BOUNDARIES
 # ============================================================================
 
-# 1. Constants and exceptions
-from .arf_core.constants import (
+from .core.config.constants import (
     OSS_EDITION,
     OSS_LICENSE,
     EXECUTION_ALLOWED,
@@ -27,78 +26,103 @@ from .arf_core.constants import (
     get_oss_capabilities,
     check_oss_compliance,
     OSSBoundaryError,
+    ENTERPRISE_UPGRADE_URL,
 )
 
-# 2. HealingIntent and related factories
-from .arf_core.models.healing_intent import (
-    HealingIntent as OriginalHealingIntent,
+# ============================================================================
+# HEALING INTENT (CORE MODEL)
+# ============================================================================
+
+from .core.models.healing_intent import (
+    HealingIntent,
     HealingIntentSerializer,
-    IntentSource as OriginalIntentSource,
-    IntentStatus as OriginalIntentStatus,
+    IntentSource,
+    IntentStatus,
     create_rollback_intent,
     create_restart_intent,
     create_scale_out_intent,
     create_oss_advisory_intent,
 )
 
-# 3. Core models (ReliabilityEvent, etc.)
-from .arf_core.models import (
-    ReliabilityEvent,
-    EventSeverity,
-    create_compatible_event,
-)
+# ============================================================================
+# OSS MCP CLIENT (ADVISORY MODE)
+# ============================================================================
 
-# 4. OSS MCP client
-from .arf_core.engine.oss_mcp_client import (
+from .core.mcp.oss_client import (
     OSSMCPClient,
     OSSMCPResponse,
     OSSAnalysisResult,
     create_oss_mcp_client,
 )
 
-# 5. Engine factory
-from .engine.engine_factory import (
-    EngineFactory,
-    create_engine,
-    get_engine,
-    get_oss_engine_capabilities,
-)
-
-# 6. Availability flag (computed from old constants)
-OSS_AVAILABLE = True
-
 # ============================================================================
-# IMPORT NEW INFRASTRUCTURE COMPONENTS
+# CORE GOVERNANCE (INFRASTRUCTURE SIMULATION)
 # ============================================================================
 
-from .infrastructure import (
-    AzureInfrastructureSimulator,
-    ProvisionResourceIntent,
-    DeployConfigurationIntent,
-    GrantAccessIntent,
-    ResourceType,
-    Environment,
-    PermissionLevel,
-    Policy,
-    CostEstimator,
-    RiskEngine,
+# Import with aliases to avoid confusion with HealingIntent above
+from .core.governance import (
+    AzureInfrastructureSimulator as InfraAzureSimulator,
+    ProvisionResourceIntent as InfraProvisionIntent,
+    DeployConfigurationIntent as InfraDeployIntent,
+    GrantAccessIntent as InfraGrantIntent,
+    ResourceType as InfraResourceType,
+    Environment as InfraEnvironment,
+    PermissionLevel as InfraPermissionLevel,
+    Policy as InfraPolicy,
+    CostEstimator as InfraCostEstimator,
+    RiskEngine as InfraRiskEngine,
     HealingIntent as InfraHealingIntent,
     IntentSource as InfraIntentSource,
     IntentStatus as InfraIntentStatus,
-    RecommendedAction,
+    RecommendedAction as InfraRecommendedAction,
     create_infrastructure_healing_intent,
     validate_infrastructure_config,
 )
 
 # ============================================================================
-# TOP‑LEVEL EXPORTS – MIX OF ORIGINAL AND PREFIXED NEW SYMBOLS
+# RUNTIME MEMORY (RAG GRAPH, FAISS) - MAY BE PARTIALLY AVAILABLE
+# ============================================================================
+
+try:
+    from .runtime.memory.rag_graph import RAGGraphMemory
+    from .runtime.memory.models import (
+        IncidentNode,
+        OutcomeNode,
+        GraphEdge,
+        SimilarityResult,
+        NodeType,
+        EdgeType,
+    )
+    _MEMORY_AVAILABLE = True
+except ImportError:
+    RAGGraphMemory = None
+    IncidentNode = OutcomeNode = GraphEdge = SimilarityResult = None
+    NodeType = EdgeType = None
+    _MEMORY_AVAILABLE = False
+    import warnings
+    warnings.warn(
+        "RAG memory components not fully installed. "
+        "Some functionality may be limited.",
+        ImportWarning,
+        stacklevel=2,
+    )
+
+# ============================================================================
+# AVAILABILITY FLAGS
+# ============================================================================
+
+OSS_AVAILABLE = True
+MEMORY_AVAILABLE = _MEMORY_AVAILABLE
+
+# ============================================================================
+# TOP-LEVEL EXPORTS
 # ============================================================================
 
 __all__ = [
     # Version
     "__version__",
 
-    # Original ARF constants
+    # Constants
     "OSS_EDITION",
     "OSS_LICENSE",
     "EXECUTION_ALLOWED",
@@ -109,78 +133,58 @@ __all__ = [
     "get_oss_capabilities",
     "check_oss_compliance",
     "OSSBoundaryError",
+    "ENTERPRISE_UPGRADE_URL",
 
-    # Original ARF models
-    "HealingIntent",               # alias to OriginalHealingIntent
+    # Core models
+    "HealingIntent",
     "HealingIntentSerializer",
-    "IntentSource",                 # alias to OriginalIntentSource
-    "IntentStatus",                 # alias to OriginalIntentStatus
+    "IntentSource",
+    "IntentStatus",
     "create_rollback_intent",
     "create_restart_intent",
     "create_scale_out_intent",
     "create_oss_advisory_intent",
 
-    # Core models
-    "ReliabilityEvent",
-    "EventSeverity",
-    "create_compatible_event",
-
-    # Original ARF engine
+    # MCP client
     "OSSMCPClient",
     "OSSMCPResponse",
     "OSSAnalysisResult",
     "create_oss_mcp_client",
 
-    # Engine factory
-    "EngineFactory",
-    "create_engine",
-    "get_engine",
-    "get_oss_engine_capabilities",
-
-    # Availability
-    "OSS_AVAILABLE",
-
-    # New infrastructure components (prefixed to avoid conflicts)
+    # Infrastructure governance (prefixed to avoid conflicts)
+    "InfraAzureSimulator",
+    "InfraProvisionIntent",
+    "InfraDeployIntent",
+    "InfraGrantIntent",
+    "InfraResourceType",
+    "InfraEnvironment",
+    "InfraPermissionLevel",
+    "InfraPolicy",
+    "InfraCostEstimator",
+    "InfraRiskEngine",
     "InfraHealingIntent",
     "InfraIntentSource",
     "InfraIntentStatus",
-    "AzureInfrastructureSimulator",
-    "ProvisionResourceIntent",
-    "DeployConfigurationIntent",
-    "GrantAccessIntent",
-    "ResourceType",
-    "Environment",
-    "PermissionLevel",
-    "Policy",
-    "CostEstimator",
-    "RiskEngine",
-    "RecommendedAction",
+    "InfraRecommendedAction",
     "create_infrastructure_healing_intent",
     "validate_infrastructure_config",
+
+    # Memory components
+    "RAGGraphMemory",
+    "IncidentNode",
+    "OutcomeNode",
+    "GraphEdge",
+    "SimilarityResult",
+    "NodeType",
+    "EdgeType",
+    "MEMORY_AVAILABLE",
+
+    # Availability
+    "OSS_AVAILABLE",
 ]
 
 # ============================================================================
-# CREATE ALIASES FOR ORIGINAL SYMBOLS (to keep top‑level names)
-# ============================================================================
-
-HealingIntent = OriginalHealingIntent
-IntentSource = OriginalIntentSource
-IntentStatus = OriginalIntentStatus
-
-# ============================================================================
-# EXPOSE THE INFRASTRUCTURE SUBMODULE (so users can also do `from .infrastructure import ...`)
-# ============================================================================
-
-from . import infrastructure
-
-# ============================================================================
-# LAZY LOADING FOR HEAVY MODULES (optional)
-# ============================================================================
-
-# (You can keep lazy loading for any heavy original components if desired)
-
-# ============================================================================
-# IMPORT-TIME VALIDATION (kept from original)
+# IMPORT-TIME VALIDATION
 # ============================================================================
 
 def _validate_oss_environment():
@@ -203,18 +207,17 @@ except Exception:
 # ============================================================================
 
 def get_oss_info():
-    """Get OSS edition information (original style)"""
+    """Get OSS edition information"""
     return {
         "edition": OSS_EDITION,
         "license": OSS_LICENSE,
         "version": __version__,
         "execution_allowed": EXECUTION_ALLOWED,
-        "upgrade_url": "https://arf.dev/enterprise",
+        "upgrade_url": ENTERPRISE_UPGRADE_URL,
         "components": [
-            "infrastructure_governance",
-            "cost_estimation",
-            "risk_scoring",
-            "policy_enforcement",
+            "core_governance",
+            "mcp_advisory",
+            "rag_memory" if MEMORY_AVAILABLE else "rag_memory (optional)",
         ],
         "limits": {
             "max_incident_nodes": MAX_INCIDENT_NODES,
