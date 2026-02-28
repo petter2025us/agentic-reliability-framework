@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic-reliability-framework"
-version = "1.0.0"
+version = "4.0.0"
 description = "Agentic Reliability Framework - OSS Edition"
 readme = "README.md"
 authors = [
-    {name = "Juan Petter", email = "juan@example.com"}
+    {name = "Juan Petter", email = "petter2025us@outlook.com"}
 ]
 license = {text = "Apache-2.0"}
 classifiers = [
