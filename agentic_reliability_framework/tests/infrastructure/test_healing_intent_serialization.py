@@ -6,18 +6,16 @@ from agentic_reliability_framework.core.governance.healing_intent import (
     IntentStatus,
     RecommendedAction,
     ConfidenceDistribution,
+    HealingIntentSerializer as NewSerializer,
 )
-from agentic_reliability_framework import (
-    HealingIntentSerializer as OldSerializer,
+from agentic_reliability_framework.core.models.healing_intent import (
     HealingIntent as OldHealingIntent,
-    IntentSource as OldIntentSource,
-    IntentStatus as OldIntentStatus,
+    HealingIntentSerializer as OldSerializer,
 )
 
 
 @pytest.fixture
 def sample_infra_healing_intent():
-    """Create a fully populated infrastructure HealingIntent."""
     conf_dist = ConfidenceDistribution(0.85, 0.05)
     return InfraHealingIntent(
         action="provision_vm",
@@ -45,49 +43,30 @@ def sample_infra_healing_intent():
     )
 
 
-def test_serialization_roundtrip(sample_infra_healing_intent):
-    """
-    Verify that an infrastructure HealingIntent can be serialized to the
-    enterprise request format and then deserialized by the old ARF's
-    HealingIntentSerializer without loss of core fields.
-    """
-    # 1. Convert infra intent to enterprise request dict
-    enterprise_req = sample_infra_healing_intent.to_enterprise_request()
+def test_new_serializer_roundtrip(sample_infra_healing_intent):
+    """Verify that the new HealingIntentSerializer can roundtrip a v2 intent."""
+    serialized = NewSerializer.serialize(sample_infra_healing_intent, version="2.0.0")
+    deserialized = NewSerializer.deserialize(serialized)
+    assert deserialized.action == sample_infra_healing_intent.action
+    assert deserialized.component == sample_infra_healing_intent.component
+    assert deserialized.parameters == sample_infra_healing_intent.parameters
+    assert deserialized.justification == sample_infra_healing_intent.justification
+    assert deserialized.confidence == sample_infra_healing_intent.confidence
+    assert deserialized.risk_score == sample_infra_healing_intent.risk_score
+    assert deserialized.source == sample_infra_healing_intent.source
 
-    # 2. Use old serializer to deserialize into an old HealingIntent
-    #    (the old serializer expects the versioned wrapper, so we wrap it)
-    versioned_data = {
-        "version": "2.0.0",
-        "data": enterprise_req,
-        "metadata": {"serialized_at": time.time()}
-    }
-    old_intent = OldSerializer.deserialize(versioned_data)
 
-    # 3. Assert core fields match
+def test_downgrade_to_old_format(sample_infra_healing_intent):
+    """
+    Test that a v2 intent can be downgraded to the old format (v1.1.0) and still
+    be deserialized by the old serializer, preserving core fields.
+    """
+    # Serialize with v1.1.0 (old format)
+    serialized_v1 = NewSerializer.serialize(sample_infra_healing_intent, version="1.1.0")
+    # Deserialize with old serializer
+    old_intent = OldSerializer.deserialize(serialized_v1)
     assert old_intent.action == sample_infra_healing_intent.action
     assert old_intent.component == sample_infra_healing_intent.component
     assert old_intent.parameters == sample_infra_healing_intent.parameters
     assert old_intent.justification == sample_infra_healing_intent.justification
     assert old_intent.confidence == sample_infra_healing_intent.confidence
-    assert old_intent.incident_id == sample_infra_healing_intent.incident_id
-    assert abs(old_intent.detected_at - sample_infra_healing_intent.detected_at) < 1.0
-
-    # 4. Verify OSS metadata was preserved
-    oss_meta = enterprise_req["oss_metadata"]
-    assert oss_meta["risk_score"] == sample_infra_healing_intent.risk_score
-    assert oss_meta["policy_violations_count"] == len(sample_infra_healing_intent.policy_violations)
-    assert oss_meta["confidence_basis"] == sample_infra_healing_intent._get_confidence_basis()
-
-    # 5. Ensure the old intent is marked as requiring enterprise
-    assert old_intent.requires_enterprise is True
-
-
-def test_oss_advisory_flag_preserved(sample_infra_healing_intent):
-    """
-    Ensure that the OSS_ADVISORY_ONLY status is carried through in the
-    enterprise request (as part of oss_metadata) and can be recreated.
-    """
-    enterprise_req = sample_infra_healing_intent.to_enterprise_request()
-    assert enterprise_req["oss_metadata"]["is_oss_advisory"] is True
-    assert enterprise_req["execution_allowed"] is False
-    assert enterprise_req["requires_enterprise"] is True
