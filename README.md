@@ -1,15 +1,28 @@
-# ARF Infrastructure Governance Module (OSS)
+# Agentic Reliability Framework (ARF) – OSS Edition
+
+[![PyPI](https://img.shields.io/pypi/v/agentic-reliability-framework.svg)](https://pypi.org/project/agentic-reliability-framework/)
+[![Documentation Status](https://readthedocs.org/projects/agentic-reliability-framework/badge/?version=latest)](https://docs.agentic-reliability-framework.io/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Agentic Reliability Framework (ARF) is an open‑source advisory engine that
 simulates governance decisions for cloud infrastructure. Its mission is to
 provide **provably safe, mathematically grounded recommendations**—approve,
 deny, or escalate—when users request provisioning, configuration, or access
-changes. The OSS module contains the core intelligence; enterprise layers build
-on it to enforce actions in real clouds.
+changes.
 
-This repository is the actively maintained OSS branch; the original
-`petterjuan/agentic-reliability-framework` repo is frozen due to access
-constraints. All future development happens here.
+This repository contains the **OSS core**. Enterprise customers layer proprietary
+enforcement and auditorship on top; the OSS code is safe to run in isolation
+because outputs are marked `OSS_ADVISORY_ONLY` when enforcement is required.
+
+---
+
+## 🔍 Problem Statement
+
+Modern cloud platforms support thousands of perturbable resources and users.
+Traditional policy engines devolve into brittle rule‑sprawl; naive ML models
+either overfit or offer no audit trail. ARF bridges this gap with a
+**bayesian‑compatible, hybrid‑learning advisory engine** grounded in clear
+decision rules and open semantics.
 
 ---
 
@@ -71,12 +84,12 @@ nonlinear interactions that are hard to capture online. For these we train a
 logistic regression using Hamiltonian Monte Carlo with the No‑U‑Turn Sampler:
 
 \[
-\Pr(\text{failure}\mid x) = \sigma(w_0 + w_{\text{role}} + w_{\text{env}}
+\Pr(\text{failure}\mid x) = \sigma(w_0 + w_{\text{role}} + w_{\text{env}} 
   + w_{\sin\omega t} + w_{\cos\omega t} + \cdots),
 \]
 
 where the cyclical encoding \((\sin, \cos)\) of time \(t\) captures daily
-rhythms. The HMC implementation (via PyMC3/ArviZ) learns a posterior over
+rhythms. The HMC implementation (via PyMC/ArviZ) learns a posterior over
 weights; the model is serialized to `hmc_model.json` and hot‑loaded by the
 simulator. The offline engine can be retrained periodically with new data.
 
@@ -95,25 +108,24 @@ fast adaptation and deep pattern recognition.
 
 ### Semantic Memory
 
-Incidents are stored using sentence‑transformers to embed text, and FAISS
-indexes for nearest‑neighbor retrieval. When an intent is evaluated the engine
-fetches similar past incidents, providing context and precedent in the output.
+Incidents are embedded using **sentence‑transformers** (`all-MiniLM-L6-v2`) and
+indexed with **FAISS**. When a new intent arrives the engine retrieves similar
+past incidents, providing context and historical effectiveness data to boost
+confidence and recommendations.
 
 ### Deterministic Probability Thresholding (DPT)
 
-We introduce **Deterministic Probability Thresholding**, a decision rule that
-differs from Bayesian credible regions, frequentist \(p\)‑values, or fuzzy
-logic. Rather than probabilistic intervals or arbitrary scores, DPT compares
-the posterior probability directly against fixed thresholds:
+We introduce **DPT**, a novel decision rule distinct from Bayesian credible
+intervals, frequentist p‑values, or fuzzy logic. It compares the posterior
+failure probability directly against fixed thresholds:
 
-- **approve** if \(P(\text{failure}) < \tau_{\text{low}}\),
-- **deny** if \(P(\text{failure}) > \tau_{\text{high}}\),
-- **otherwise escalate**.
+- **Approve** if `P(failure) < τ_low`
+- **Deny** if `P(failure) > τ_high`
+- **Escalate** otherwise
 
-The thresholds \(\tau_{\text{low/high}}\) are deterministic constants
-(typically 0.2/0.8) that can be set per‑policy. This makes decisions
-transparent, auditable, and immune to the “credibility paradox” of overlapping
-intervals.
+Thresholds `τ_low` and `τ_high` are deterministic constants (e.g., 0.2/0.8),
+making decisions transparent, auditable, and immune to the “credibility
+paradox”.
 
 ### Cyclical Time Encoding
 
