@@ -4,7 +4,6 @@ from agentic_reliability_framework.core.governance.intents import (
     DeployConfigurationIntent,
     GrantAccessIntent,
     ResourceType,
-    Environment,
     PermissionLevel,
 )
 
@@ -15,18 +14,18 @@ def test_provision_resource_intent_creation():
         region="eastus",
         size="Standard_D2s_v3",
         requester="alice",
-        environment=Environment.PROD
+        environment="prod"
     )
     assert intent.intent_type == "provision_resource"
     assert intent.requester == "alice"
-    assert intent.environment == Environment.PROD
+    assert intent.environment == "prod"
 
 
 def test_deploy_configuration_intent_creation():
     intent = DeployConfigurationIntent(
         service_name="api",
         change_scope="canary",
-        deployment_target=Environment.PROD,
+        deployment_target="prod",
         requester="bob",
         configuration={"feature_x": True}
     )
