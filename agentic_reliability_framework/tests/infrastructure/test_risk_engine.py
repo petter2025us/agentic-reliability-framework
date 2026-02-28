@@ -1,6 +1,6 @@
 import pytest
-from agentic_reliability_framework.infrastructure.risk_engine import RiskEngine
-from agentic_reliability_framework.infrastructure.intents import (
+from agentic_reliability_framework.core.governance.risk_engine import RiskEngine
+from agentic_reliability_framework.core.governance.intents import (
     ProvisionResourceIntent,
     GrantAccessIntent,
     DeployConfigurationIntent,
@@ -19,8 +19,9 @@ def test_risk_low_cost():
         requester="alice",
         environment=Environment.DEV
     )
-    score, expl = engine.calculate_risk(intent, cost_estimate=70.0, policy_violations=[])
-    assert score == pytest.approx(0.1 + (70/5000)*0.3, rel=1e-2)  # ~0.1042
+    score, _, _ = engine.calculate_risk(intent, cost_estimate=70.0, policy_violations=[])
+    # expected: intent_type 0.1 + cost (70/5000*0.3=0.0042) = 0.1042
+    assert score == pytest.approx(0.1042, abs=1e-3)
 
 
 def test_risk_high_cost():
@@ -32,9 +33,9 @@ def test_risk_high_cost():
         requester="alice",
         environment=Environment.PROD
     )
-    score, expl = engine.calculate_risk(intent, cost_estimate=560.0, policy_violations=[])
+    score, _, _ = engine.calculate_risk(intent, cost_estimate=560.0, policy_violations=[])
     # base 0.1 + cost (560/5000*0.3=0.0336) + env 0.1 = 0.2336
-    assert score == pytest.approx(0.23, abs=0.01)
+    assert score == pytest.approx(0.2336, abs=1e-3)
 
 
 def test_risk_access_grant_admin():
@@ -45,8 +46,8 @@ def test_risk_access_grant_admin():
         resource_scope="/subscriptions/123",
         requester="alice"
     )
-    score, expl = engine.calculate_risk(intent, cost_estimate=None, policy_violations=[])
-    # intent type 0.3 + permission 0.8*0.3 = 0.24 -> total 0.54
+    score, _, _ = engine.calculate_risk(intent, cost_estimate=None, policy_violations=[])
+    # intent_type 0.3 + permission (0.8*0.3=0.24) = 0.54
     assert score == 0.54
 
 
@@ -59,10 +60,24 @@ def test_risk_with_policy_violations():
         requester="alice",
         environment=Environment.PROD
     )
-    score, expl = engine.calculate_risk(
+    score, _, _ = engine.calculate_risk(
         intent,
         cost_estimate=280.0,
         policy_violations=["region not allowed", "cost too high"]
     )
-    # base 0.1 + cost (280/5000*0.3=0.0168) + env 0.1 + violations 2*0.2=0.4 -> total 0.6168
-    assert score == pytest.approx(0.62, abs=0.01)
+    # base 0.1 + cost (280/5000*0.3=0.0168) + env 0.1 + violations (2*0.2=0.4) = 0.6168
+    assert score == pytest.approx(0.6168, abs=1e-3)
+
+
+def test_deploy_config_risk():
+    engine = RiskEngine()
+    intent = DeployConfigurationIntent(
+        service_name="api",
+        change_scope="global",
+        deployment_target=Environment.PROD,
+        requester="alice",
+        configuration={}
+    )
+    score, _, _ = engine.calculate_risk(intent, cost_estimate=None, policy_violations=[])
+    # intent_type 0.2 + scope 0.6*0.2 = 0.12 + env 0.1 = 0.42
+    assert score == 0.42
