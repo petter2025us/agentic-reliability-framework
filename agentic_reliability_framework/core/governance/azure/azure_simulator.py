@@ -28,7 +28,7 @@ from agentic_reliability_framework.core.governance.healing_intent import (
     RecommendedAction,
     IntentSource,
 )
-from agentic_reliability_framework.constants import MAX_POLICY_VIOLATIONS
+from agentic_reliability_framework.core.config.constants import MAX_POLICY_VIOLATIONS
 
 
 class AzureInfrastructureSimulator:
