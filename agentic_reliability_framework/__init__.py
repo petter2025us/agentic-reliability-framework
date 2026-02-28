@@ -7,6 +7,8 @@ This package provides:
 - MCP client for advisory analysis
 - HealingIntent for OSS→Enterprise handoff
 - RAG memory for similar incident retrieval
+- Multi-agent runtime with anomaly detection, root cause analysis, and forecasting
+- Hamiltonian Monte Carlo (HMC) probabilistic risk assessment
 """
 
 __version__ = "4.0.0"
@@ -108,11 +110,50 @@ except ImportError:
     )
 
 # ============================================================================
+# NEW RUNTIME COMPONENTS (v4) - Multi-Agent System, Analytics, HMC
+# ============================================================================
+
+try:
+    from .runtime.engine import EnhancedReliabilityEngine
+    from .runtime.analytics import (
+        AdvancedAnomalyDetector,
+        SimplePredictiveEngine,
+        BusinessImpactCalculator,
+    )
+    from .runtime.agents import (
+        AnomalyDetectionAgent,
+        RootCauseAgent,
+        PredictiveAgent,
+    )
+    from .runtime.orchestration import OrchestrationManager
+    from .runtime.hmc import HMCRiskLearner
+    _RUNTIME_AVAILABLE = True
+except ImportError as e:
+    EnhancedReliabilityEngine = None
+    AdvancedAnomalyDetector = None
+    SimplePredictiveEngine = None
+    BusinessImpactCalculator = None
+    AnomalyDetectionAgent = None
+    RootCauseAgent = None
+    PredictiveAgent = None
+    OrchestrationManager = None
+    HMCRiskLearner = None
+    _RUNTIME_AVAILABLE = False
+    import warnings
+    warnings.warn(
+        f"Runtime components not fully installed: {e}. "
+        "Some functionality may be limited.",
+        ImportWarning,
+        stacklevel=2,
+    )
+
+# ============================================================================
 # AVAILABILITY FLAGS
 # ============================================================================
 
 OSS_AVAILABLE = True
 MEMORY_AVAILABLE = _MEMORY_AVAILABLE
+RUNTIME_AVAILABLE = _RUNTIME_AVAILABLE
 
 # ============================================================================
 # TOP-LEVEL EXPORTS
@@ -179,6 +220,18 @@ __all__ = [
     "EdgeType",
     "MEMORY_AVAILABLE",
 
+    # Runtime components
+    "EnhancedReliabilityEngine",
+    "AdvancedAnomalyDetector",
+    "SimplePredictiveEngine",
+    "BusinessImpactCalculator",
+    "AnomalyDetectionAgent",
+    "RootCauseAgent",
+    "PredictiveAgent",
+    "OrchestrationManager",
+    "HMCRiskLearner",
+    "RUNTIME_AVAILABLE",
+
     # Availability
     "OSS_AVAILABLE",
 ]
@@ -208,20 +261,28 @@ except Exception:
 
 def get_oss_info():
     """Get OSS edition information"""
+    components = ["core_governance", "mcp_advisory"]
+    if MEMORY_AVAILABLE:
+        components.append("rag_memory")
+    else:
+        components.append("rag_memory (optional)")
+    if RUNTIME_AVAILABLE:
+        components.append("multi_agent_system")
+        components.append("hmc_probabilistic_risk")
+    else:
+        components.append("runtime (optional)")
+
     return {
         "edition": OSS_EDITION,
         "license": OSS_LICENSE,
         "version": __version__,
         "execution_allowed": EXECUTION_ALLOWED,
         "upgrade_url": ENTERPRISE_UPGRADE_URL,
-        "components": [
-            "core_governance",
-            "mcp_advisory",
-            "rag_memory" if MEMORY_AVAILABLE else "rag_memory (optional)",
-        ],
+        "components": components,
         "limits": {
             "max_incident_nodes": MAX_INCIDENT_NODES,
             "max_outcome_nodes": MAX_OUTCOME_NODES,
             "advisory_only": True,
         },
+        "runtime_available": RUNTIME_AVAILABLE,
     }
