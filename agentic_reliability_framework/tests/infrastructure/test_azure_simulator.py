@@ -1,18 +1,22 @@
 import pytest
-from agentic_reliability_framework.infrastructure.azure.azure_simulator import AzureInfrastructureSimulator
-from agentic_reliability_framework.infrastructure.policies import Policy
-from agentic_reliability_framework.infrastructure.intents import (
+from agentic_reliability_framework.core.governance.azure.azure_simulator import AzureInfrastructureSimulator
+from agentic_reliability_framework.core.governance.policies import (
+    allow_all,
+    MaxPermissionLevelPolicy,
+    CostThresholdPolicy,
+)
+from agentic_reliability_framework.core.governance.intents import (
     ProvisionResourceIntent,
     GrantAccessIntent,
     ResourceType,
     Environment,
     PermissionLevel,
 )
-from agentic_reliability_framework.infrastructure.healing_intent import RecommendedAction
+from agentic_reliability_framework.core.governance.healing_intent import RecommendedAction
 
 
 def test_simulator_approve_low_risk():
-    policies = [Policy(name="allow all", description="no restrictions")]
+    policies = allow_all()  # single policy, not a list
     simulator = AzureInfrastructureSimulator(policies)
     intent = ProvisionResourceIntent(
         resource_type=ResourceType.VM,
@@ -28,7 +32,7 @@ def test_simulator_approve_low_risk():
 
 
 def test_simulator_deny_high_risk():
-    policies = [Policy(name="no admin", max_permission_level="write")]
+    policies = MaxPermissionLevelPolicy(max_level=PermissionLevel.WRITE)
     simulator = AzureInfrastructureSimulator(policies)
     intent = GrantAccessIntent(
         principal="bob",
@@ -43,7 +47,7 @@ def test_simulator_deny_high_risk():
 
 
 def test_simulator_deny_due_to_cost_threshold():
-    policies = [Policy(name="cost limit", cost_threshold_usd=100.0)]
+    policies = CostThresholdPolicy(max_cost_usd=100.0)
     simulator = AzureInfrastructureSimulator(policies)
     intent = ProvisionResourceIntent(
         resource_type=ResourceType.VM,
@@ -59,9 +63,8 @@ def test_simulator_deny_due_to_cost_threshold():
 
 
 def test_simulator_escalate_medium_risk():
-    policies = [Policy(name="allow all", description="no restrictions")]
+    policies = allow_all()
     simulator = AzureInfrastructureSimulator(policies)
-    # Grant access with write permission gives risk ~0.42
     intent = GrantAccessIntent(
         principal="bob",
         permission_level=PermissionLevel.WRITE,
