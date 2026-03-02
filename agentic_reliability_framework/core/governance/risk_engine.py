@@ -221,7 +221,6 @@ class HyperpriorBetaStore:
 # HMC Model (Offline Bayesian Logistic Regression)
 # =============================================================================
 class HMCModel:
-    """[unchanged from original]"""
     def __init__(self, model_path: str = "hmc_model.json"):
         self.model_path = model_path
         self.coefficients: Optional[Dict[str, float]] = None
@@ -268,7 +267,7 @@ class HMCModel:
         logger.info(f"HMC model saved to {self.model_path}")
 
     def predict(self, intent: InfrastructureIntent, context: Dict[str, Any]) -> Optional[float]:
-        """Return HMC‑predicted probability (unchanged)."""
+        """Return HMC‑predicted probability."""
         if not self.is_ready or self.coefficients is None or self.feature_names is None:
             return None
 
@@ -319,9 +318,39 @@ class HMCModel:
         elif isinstance(intent, DeployConfigurationIntent):
             if "database" in intent.service_name.lower():
                 return ActionCategory.DATABASE
-            # For any other configuration change, use the baseline (DEFAULT) category
-            return ActionCategory.DEFAULT
+            return ActionCategory.DEFAULT  # <-- changed from COMPUTE to DEFAULT
         return ActionCategory.DEFAULT
+
+    def train(self, incidents_df: pd.DataFrame):
+        """Train HMC model."""
+        incidents_df['sin_hour'] = np.sin(2 * np.pi * incidents_df['hour'] / 24)
+        incidents_df['cos_hour'] = np.cos(2 * np.pi * incidents_df['hour'] / 24)
+
+        category_dummies = pd.get_dummies(incidents_df['category'], prefix='cat')
+        feature_cols = ['sin_hour', 'cos_hour', 'env_prod', 'user_role'] + list(category_dummies.columns)
+        X = incidents_df[feature_cols].values.astype(float)
+        y = incidents_df['outcome'].values.astype(int)
+
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        n_features = X_scaled.shape[1]
+        with pm.Model() as hmc_model:
+            alpha = pm.Normal('alpha', mu=0, sigma=2)
+            beta = pm.Normal('beta', mu=0, sigma=2, shape=n_features)
+            mu = alpha + pm.math.dot(X_scaled, beta)
+            pm.Bernoulli('y', logit_p=mu, observed=y)
+            trace = pm.sample(draws=1000, tune=1000, chains=2, step=pm.NUTS(), progressbar=False)
+
+        self.coefficients = {}
+        self.coefficients['alpha'] = float(trace.posterior['alpha'].mean())
+        for i, name in enumerate(feature_cols):
+            self.coefficients[f'beta_{name}'] = float(trace.posterior['beta'][..., i].mean())
+        self.feature_names = feature_cols
+        self.feature_scaler = scaler
+        self.is_ready = True
+        self._save(trace, feature_cols, scaler)
+        logger.info("HMC model training completed.")
 
 
 # =============================================================================
@@ -340,8 +369,7 @@ def categorize_intent(intent: InfrastructureIntent) -> ActionCategory:
     elif isinstance(intent, DeployConfigurationIntent):
         if "database" in intent.service_name.lower():
             return ActionCategory.DATABASE
-        # For any other configuration change, use the baseline (DEFAULT) category
-        return ActionCategory.DEFAULT
+        return ActionCategory.DEFAULT  # <-- changed from COMPUTE to DEFAULT
     return ActionCategory.DEFAULT
 
 
