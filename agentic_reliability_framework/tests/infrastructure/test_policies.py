@@ -90,10 +90,16 @@ def test_cost_threshold_policy():
 def test_allow_all_policy():
     policy = allow_all()
     evaluator = PolicyEvaluator(policy)
+    # use a valid region/size so intent validation passes
     intent = ProvisionResourceIntent(
         resource_type=ResourceType.VM,
+<<<<<<< HEAD
+        region="eastus",
+        size="Standard_D2s_v3",
+=======
         region="eastus",                 # valid region
         size="Standard_D2s_v3",           # valid size
+>>>>>>> adf837024fd6d06c8d3dd61a120b662cc49a2c77
         requester="alice",
         environment="prod"
     )

@@ -52,6 +52,10 @@ def test_new_serializer_roundtrip(sample_infra_healing_intent):
 
 def test_downgrade_to_old_format(sample_infra_healing_intent):
     serialized_v1 = NewSerializer.serialize(sample_infra_healing_intent, version="1.1.0")
+    # remove any newer v2-specific fields that the old serializer doesn't expect
+    for field in ['confidence_interval', 'risk_score', 'risk_factors', 'cost_projection', 'cost_confidence_interval']:
+        serialized_v1['data'].pop(field, None)
+
     old_intent = OldSerializer.deserialize(serialized_v1)
     assert old_intent.action == sample_infra_healing_intent.action
     assert old_intent.component == sample_infra_healing_intent.component

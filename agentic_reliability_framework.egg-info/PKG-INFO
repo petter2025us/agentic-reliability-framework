@@ -2,7 +2,7 @@ Metadata-Version: 2.4
 Name: agentic-reliability-framework
 Version: 4.0.0
 Summary: Agentic Reliability Framework - OSS Edition
-Author-email: Juan Petter <juan@example.com>
+Author-email: Juan Petter <petter2025us@outlook.com>
 License: Apache-2.0
 Project-URL: Homepage, https://github.com/petter2025us/agentic-reliability-framework
 Classifier: Programming Language :: Python :: 3
@@ -13,6 +13,12 @@ Description-Content-Type: text/markdown
 Requires-Dist: pydantic>=2.0
 Requires-Dist: numpy
 Requires-Dist: pyyaml
+Requires-Dist: circuitbreaker>=2.0.0
+Requires-Dist: pymc>=5.0.0
+Requires-Dist: arviz>=0.15.0
+Requires-Dist: anthropic>=0.8.1
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: scikit-learn>=1.0.0
 
 # ARF Infrastructure Governance Module (OSS)
 

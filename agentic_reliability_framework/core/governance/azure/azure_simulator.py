@@ -22,7 +22,7 @@ from agentic_reliability_framework.core.governance.healing_intent import (
     HealingIntent,
     RecommendedAction,
     IntentSource,
-    create_infrastructure_healing_intent,
+    create_infrastructure_healing_intent,  # <-- Use factory
 )
 from agentic_reliability_framework.core.config.constants import MAX_POLICY_VIOLATIONS
 
@@ -107,6 +107,23 @@ class AzureInfrastructureSimulator:
             "factor_contributions": contributions,
         }
 
+<<<<<<< HEAD
+        # 8. Create the HealingIntent via the factory helper and then mark as OSS advisory
+        healing_intent = HealingIntent.from_infrastructure_intent(
+            infrastructure_intent=intent,
+            action=intent.intent_type,
+            component=getattr(intent, "component", "unknown"),
+            parameters={},
+            justification=justification,
+            confidence=0.9,  # could be derived from factor uncertainties
+            risk_score=risk_score,
+            risk_factors=contributions,
+            cost_projection=cost,
+            policy_violations=violations,
+            recommended_action=recommended_action,
+            source=IntentSource.INFRASTRUCTURE_ANALYSIS,
+        )
+=======
         # 7. Create a mock result object for the factory function
         class MockInfrastructureResult:
             def __init__(self):
@@ -119,6 +136,7 @@ class AzureInfrastructureSimulator:
                 self.confidence_score = 0.9
                 self.evaluation_details = details
                 self.infrastructure_intent = intent
+>>>>>>> adf837024fd6d06c8d3dd61a120b662cc49a2c77
 
         result = MockInfrastructureResult()
 
