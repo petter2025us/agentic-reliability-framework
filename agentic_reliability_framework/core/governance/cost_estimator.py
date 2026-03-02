@@ -1,4 +1,3 @@
-# agentic_reliability_framework/infrastructure/cost_estimator.py
 """
 Cost Estimation Engine – Deterministic pricing with Bayesian uncertainty.
 
@@ -89,7 +88,7 @@ class CostEstimator:
         else:
             self._pricing = self.DEFAULT_PRICING.copy()
 
-    @lru_cache(maxsize=256)
+    # Removed @lru_cache to avoid hashing issues with Pydantic models
     def estimate_monthly_cost(self, intent: ProvisionResourceIntent) -> Optional[float]:
         """
         Deterministic cost estimate.
