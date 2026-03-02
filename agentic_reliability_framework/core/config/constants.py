@@ -66,6 +66,12 @@ MAX_API_REQUESTS_PER_MINUTE: Final[int] = 60  # From config.max_requests_per_min
 # === POLICY LIMITS ===
 MAX_POLICY_VIOLATIONS: Final[int] = 10  # Maximum number of policy violations to consider in a single evaluation
 
+# === RISK & DECISION LIMITS ===
+MAX_RISK_FACTORS: Final[int] = 10        # Maximum number of risk factors considered in a risk assessment
+MAX_COST_PROJECTIONS: Final[int] = 5     # Maximum number of cost projection scenarios
+MAX_DECISION_TREE_DEPTH: Final[int] = 5  # Maximum depth of decision tree for explanation
+MAX_ALTERNATIVE_ACTIONS: Final[int] = 3  # Maximum number of alternative actions to consider
+
 # ==================== OPERATIONAL THRESHOLDS ====================
 LATENCY_WARNING: Final[float] = 150.0
 LATENCY_CRITICAL: Final[float] = 300.0
@@ -301,6 +307,10 @@ def get_oss_capabilities() -> Dict[str, Any]:
             "max_api_keys": MAX_API_KEYS,
             "max_api_requests_per_minute": MAX_API_REQUESTS_PER_MINUTE,
             "max_policy_violations": MAX_POLICY_VIOLATIONS,
+            "max_risk_factors": MAX_RISK_FACTORS,
+            "max_cost_projections": MAX_COST_PROJECTIONS,
+            "max_decision_tree_depth": MAX_DECISION_TREE_DEPTH,
+            "max_alternative_actions": MAX_ALTERNATIVE_ACTIONS,
         },
         
         "upgrade_available": True,
@@ -551,6 +561,12 @@ __all__ = [
     
     # === POLICY LIMITS ===
     "MAX_POLICY_VIOLATIONS",
+    
+    # === RISK & DECISION LIMITS ===
+    "MAX_RISK_FACTORS",
+    "MAX_COST_PROJECTIONS",
+    "MAX_DECISION_TREE_DEPTH",
+    "MAX_ALTERNATIVE_ACTIONS",
     
     # === OPERATIONAL THRESHOLDS ===
     "LATENCY_WARNING",
