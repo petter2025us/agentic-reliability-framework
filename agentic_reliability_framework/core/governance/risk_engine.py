@@ -214,9 +214,8 @@ class HMCModel:
         elif isinstance(intent, GrantAccessIntent):
             return ActionCategory.SECURITY
         elif isinstance(intent, DeployConfigurationIntent):
-            if "database" in intent.service_name.lower():
-                return ActionCategory.DATABASE
-            return ActionCategory.COMPUTE
+            # configuration deployments are generic; classify as DEFAULT by default
+            return ActionCategory.DEFAULT
         return ActionCategory.DEFAULT
 
     def train(self, incidents_df: pd.DataFrame):
@@ -276,9 +275,8 @@ def categorize_intent(intent: InfrastructureIntent) -> ActionCategory:
     elif isinstance(intent, GrantAccessIntent):
         return ActionCategory.SECURITY
     elif isinstance(intent, DeployConfigurationIntent):
-        if "database" in intent.service_name.lower():
-            return ActionCategory.DATABASE
-        return ActionCategory.COMPUTE
+        # configuration deployments should count as DEFAULT category
+        return ActionCategory.DEFAULT
     return ActionCategory.DEFAULT
 
 
@@ -371,7 +369,11 @@ class RiskEngine:
     def _context_multiplier(self, intent: InfrastructureIntent) -> float:
         """Compute multiplier based on environment, user role, time, etc."""
         mult = 1.0
-        if hasattr(intent, "environment") and intent.environment == Environment.PROD:
+        # environment is a literal string ("prod"/"dev" etc.)
+        if hasattr(intent, "environment") and intent.environment == "prod":
+            mult *= 1.5
+        # some intents (e.g. DeployConfigurationIntent) use `deployment_target`
+        elif hasattr(intent, "deployment_target") and intent.deployment_target == "prod":
             mult *= 1.5
         # Additional factors could be added
         return mult

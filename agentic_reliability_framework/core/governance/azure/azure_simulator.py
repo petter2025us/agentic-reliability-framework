@@ -111,17 +111,19 @@ class AzureInfrastructureSimulator:
             "factor_contributions": contributions,
         }
 
-        # 8. Create the HealingIntent with proper source and then mark as OSS advisory
-        healing_intent = HealingIntent(
-            intent_id=intent.intent_id,
-            intent_summary=intent_summary,
-            cost_projection=cost,
+        # 8. Create the HealingIntent via the factory helper and then mark as OSS advisory
+        healing_intent = HealingIntent.from_infrastructure_intent(
+            infrastructure_intent=intent,
+            action=intent.intent_type,
+            component=getattr(intent, "component", "unknown"),
+            parameters={},
+            justification=justification,
+            confidence=0.9,  # could be derived from factor uncertainties
             risk_score=risk_score,
+            risk_factors=contributions,
+            cost_projection=cost,
             policy_violations=violations,
             recommended_action=recommended_action,
-            justification=justification,
-            confidence_score=0.9,  # could be derived from factor uncertainties
-            evaluation_details=details,
             source=IntentSource.INFRASTRUCTURE_ANALYSIS,
         )
 
