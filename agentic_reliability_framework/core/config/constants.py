@@ -63,6 +63,9 @@ MAX_CONCURRENT_ANALYSIS: Final[int] = 10
 MAX_EVENT_RATE_PER_SECOND: Final[int] = 100
 MAX_API_REQUESTS_PER_MINUTE: Final[int] = 60  # From config.max_requests_per_minute
 
+# === POLICY LIMITS ===
+MAX_POLICY_VIOLATIONS: Final[int] = 10  # Maximum number of policy violations to consider in a single evaluation
+
 # ==================== OPERATIONAL THRESHOLDS ====================
 LATENCY_WARNING: Final[float] = 150.0
 LATENCY_CRITICAL: Final[float] = 300.0
@@ -297,6 +300,7 @@ def get_oss_capabilities() -> Dict[str, Any]:
             "max_event_rate": MAX_EVENT_RATE_PER_SECOND,
             "max_api_keys": MAX_API_KEYS,
             "max_api_requests_per_minute": MAX_API_REQUESTS_PER_MINUTE,
+            "max_policy_violations": MAX_POLICY_VIOLATIONS,
         },
         
         "upgrade_available": True,
@@ -544,6 +548,9 @@ __all__ = [
     "MAX_CONCURRENT_ANALYSIS",
     "MAX_EVENT_RATE_PER_SECOND",
     "MAX_API_REQUESTS_PER_MINUTE",
+    
+    # === POLICY LIMITS ===
+    "MAX_POLICY_VIOLATIONS",
     
     # === OPERATIONAL THRESHOLDS ===
     "LATENCY_WARNING",
