@@ -11,7 +11,7 @@ This package provides:
 - Hamiltonian Monte Carlo (HMC) probabilistic risk assessment
 """
 
-__version__ = "4.0.0"
+from .__version__ import __version__
 
 # ============================================================================
 # CONSTANTS & OSS BOUNDARIES
