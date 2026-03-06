@@ -173,6 +173,34 @@ components live.
 
 ---
 
+## 7. Command‑line Diagnostic Tool
+
+A compact CLI utility shipped in the OSS core gives quick, scriptable insight into the system reliability score derived from a single signal. The implementation is in `agentic_reliability_framework/cli/diagnose.py`. You can run it as an installed command (`arf diagnose`) if a console entry point is provided by your packaging, or directly via Python:
+
+```bash
+# run with a latency signal (ms)
+python -m agentic_reliability_framework.cli.diagnose --latency 320 -v
+
+# run with an anomaly score (0-1)
+python -m agentic_reliability_framework.cli.diagnose --anomaly 0.12
+
+# run with an error rate (0-1)
+python -m agentic_reliability_framework.cli.diagnose --error-rate 0.05
+```
+
+The tool prints a short report containing:
+
+- Reliability Score (0..1)
+- Risk Level (LOW, MEDIUM, HIGH, CRITICAL)
+- Suggested Action (Monitor / Investigate / Intervene / IMMEDIATE ACTION REQUIRED)
+- Signal Source and, with `--verbose`, supporting metrics and thresholds
+
+Exit codes are useful for automation: 0 for LOW/MEDIUM, 1 for HIGH, 2 for CRITICAL.
+
+This CLI uses internal helpers (`compute_reliability_score`, `signal_to_reliability`) defined in `core/reliability_signal.py` to transform raw signals into a reliability estimate. It is intended for quick local checks and lightweight monitoring integrations.
+
+---
+
 That concludes the quick tour! Dive into the code, read the docs at
 https://docs.agentic-reliability-framework.io, and don't hesitate to open an
 issue or contribute a PR. Happy hacking!
