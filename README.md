@@ -57,7 +57,8 @@ and returns a `HealingIntent` recommendation. Internally it evaluates:
 These pieces are assembled by `AzureInfrastructureSimulator` (or other cloud
 adapters) and produce human‑readable justifications.
 
-<img src="docs/architecture.png" alt="ARF architecture diagram" />
+Architecture diagram:  
+https://github.com/petter2025us/agentic-reliability-framework/blob/main/docs/architecture.mmd
 
 ---
 
