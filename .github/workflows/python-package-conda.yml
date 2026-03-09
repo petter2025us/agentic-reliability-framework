@@ -32,3 +32,24 @@ jobs:
       run: |
         conda install pytest
         pytest
+    - name: Install test tools
+      run: |
+        pip install pytest-cov bandit
+    - name: Test with coverage
+      run: |
+        pytest --cov=agentic_reliability_framework --cov-report=xml --cov-report=html
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+    - name: Security scan with bandit
+      run: |
+        bandit -r agentic_reliability_framework -f json -o bandit-report.json || true
+    - name: Upload bandit report
+      uses: actions/upload-artifact@v4
+      with:
+        name: bandit-report
+        path: bandit-report.json
