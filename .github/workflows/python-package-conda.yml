@@ -49,7 +49,7 @@ jobs:
       run: |
         bandit -r agentic_reliability_framework -f json -o bandit-report.json || true
     - name: Upload bandit report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: bandit-report
         path: bandit-report.json
