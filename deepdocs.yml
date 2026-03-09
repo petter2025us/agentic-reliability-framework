@@ -4,6 +4,11 @@ target:
   - url: "TUTORIAL.md"
   - url: "docs/memory.md"
   - url: "CHANGELOG.md"
+  - url: "docs/getting_started.md"
+  - url: "docs/api_reference.md"
+  - url: "docs/development.md"
+  - url: "docs/examples.md"
+  - url: "docs/faq.md"
 
 include:
   - "agentic_reliability_framework/"
